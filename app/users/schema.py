@@ -1,11 +1,13 @@
 from pydantic import BaseModel, EmailStr, Field
 
 class Base(BaseModel):
-    name: str
-    email: EmailStr
+    pass
     
 class User(Base):
+    name: str
+    email: EmailStr
     password: str = Field(min_length=8)
     
-class UserResponse(Base):
-    pass
+
+class Message(Base):
+    message: str

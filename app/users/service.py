@@ -1,6 +1,6 @@
-from app.users.schema import User, UserResponse
+from app.users.schema import User, Message
 
 
-def user_register(user: User) -> UserResponse:
+def user_register(user: User) -> Message:
     
-    return UserResponse(name=user.name, email=user.email)
+    return Message(message="user registered successfully")
