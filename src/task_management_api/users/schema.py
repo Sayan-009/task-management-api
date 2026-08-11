@@ -22,6 +22,15 @@ class UserResponse(BaseModel):
     
     
 class TokenResponse(BaseModel):
-    token: str
+    access_token: str
     token_type: str = "bearer"
+    
+    
+class UserUpdate(BaseModel):
+    name: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=100
+    )
+    email: EmailStr | None = None
 

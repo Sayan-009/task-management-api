@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from task_management_api.core.security import hash_password, verify_password
 from task_management_api.users.model import User
 from task_management_api.users.repository import UserRepository
+from task_management_api.users.schema import UserUpdate
 
 
 class UserService:
@@ -62,5 +63,39 @@ class UserService:
             raise ValueError("User account is inactive")
 
         return exising_user
+    
+    
+    @staticmethod
+    def update_user(
+        session: Session,
+        current_user: User,
+        update_data: UserUpdate
+    ) -> User:
+        updates = update_data.model_dump(exclude_unset=True)
+        if not updates:
+            raise ValueError("No fields provided for update")
+        
+        if "email" in updates:
+            new_email = updates["email"]
+
+            if new_email != current_user.email:
+                existing_user = UserRepository.get_by_email(
+                    session,
+                    new_email,
+                )
+
+                if existing_user is not None:
+                    raise ValueError(
+                        "Email already exists, use a different email"
+                    )
+        
+        return UserRepository.update(
+            session,
+            current_user,
+            updates,
+        )
+        
+        
+                
         
         

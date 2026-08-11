@@ -8,6 +8,7 @@ from task_management_api.users.schema import (
     UserResponse,
     UserLogin,
     TokenResponse,
+    UserUpdate
 )
 from task_management_api.users.service import UserService
 from task_management_api.core.token import TokenService
@@ -57,7 +58,7 @@ def login_user(
         access_token = TokenService.create_access_token(subject=str(user.id))
         
         return TokenResponse(
-            token=access_token,
+            access_token=access_token,
             token_type="bearer",
         )
         
@@ -74,3 +75,29 @@ def get_current_user_profile(
     current_user: User = Depends(get_current_user)
 ) -> UserResponse:
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
+def current_user_update(
+    update_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> UserResponse:
+    try:
+        updated_user = UserService.update_user(
+            session,
+            current_user,
+            update_data
+        )
+        
+        session.commit()
+        
+        return updated_user
+    
+    except ValueError as exc:
+        session.rollback()
+        
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
