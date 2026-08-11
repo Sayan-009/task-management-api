@@ -8,7 +8,9 @@ from task_management_api.users.schema import (
     UserResponse,
     UserLogin,
     TokenResponse,
-    UserUpdate
+    UserUpdate,
+    ChangePasswordRequest,
+    MessageResponse
 )
 from task_management_api.users.service import UserService
 from task_management_api.core.token import TokenService
@@ -100,4 +102,33 @@ def current_user_update(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
+        ) from exc
+        
+        
+        
+@router.patch("/me/password", response_model=MessageResponse, status_code=status.HTTP_200_OK)
+def password_update(
+    passwords: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db)
+) -> MessageResponse:
+    try:
+        user = UserService.update_password(
+            session,
+            current_user,
+            current_password=passwords.current_password,
+            new_password=passwords.new_password,
+        )
+        
+        session.commit()
+        
+        return MessageResponse(message="Password changed successfully")
+    
+    except ValueError as exc:
+        
+        session.rollback()
+        
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc)
         ) from exc

@@ -96,6 +96,34 @@ class UserService:
         )
         
         
+    @staticmethod
+    def update_password(
+        session: Session,
+        current_user: User,
+        current_password: str,
+        new_password: str
+    ) -> User:
+        if not verify_password(
+            current_password,
+            current_user.password_hash   
+        ):
+            raise ValueError("Current password is incorrect")
+        
+        if current_password == new_password:
+            raise ValueError("new password must be differnt from current password")
+        
+        
+        new_password_hashed = hash_password(new_password)
+        
+        return UserRepository.update_password(
+            session,
+            current_user,
+            new_password_hashed
+        )
+        
+        
+                
+        
                 
         
         
