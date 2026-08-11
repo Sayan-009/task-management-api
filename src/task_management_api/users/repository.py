@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 
 from task_management_api.users.model import User
+from task_management_api.users.schema import UserUpdate
 
 class UserRepository:
     
@@ -35,3 +36,19 @@ class UserRepository:
         statement = select(User).where(User.id == user_id)
         
         return session.execute(statement).scalar_one_or_none()
+    
+    
+    @staticmethod
+    def update(
+        session: Session,
+        current_user: User,
+        updates: dict,
+    ) -> User:
+        
+        for field, value in updates.items():
+            setattr(current_user, field, value)
+            
+        session.flush()
+        
+        return current_user
+            
