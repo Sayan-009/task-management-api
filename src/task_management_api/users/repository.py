@@ -51,4 +51,17 @@ class UserRepository:
         session.flush()
         
         return current_user
+    
+    
+    @staticmethod
+    def update_password(
+        session: Session,
+        current_user: User,
+        new_password_hashed: str
+    ) -> User:
+        current_user.password_hash = new_password_hashed
+        
+        session.flush()
+        
+        return current_user
             
