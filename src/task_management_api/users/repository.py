@@ -64,4 +64,15 @@ class UserRepository:
         session.flush()
         
         return current_user
+    
+    @staticmethod
+    def deactivate(
+        session: Session,
+        current_user: User
+    ) -> None:
+        current_user.is_active = False
+        
+        session.flush()
+        
+       
             
