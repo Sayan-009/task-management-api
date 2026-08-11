@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 
-from task_management_api.users.router import router as user_router
+from task_management_api.users.router import router as users_router
 
 app = FastAPI()
 
-app.include_router(user_router)
+app.include_router(users_router)
 
 
 

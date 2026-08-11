@@ -4,9 +4,11 @@
 # Python Cache
 __pycache__/
 *.pyc
+*.py[cod]
 
 # Environment Variables
 .env
+.env.*
 
 # IDE Settings
 .vscode/
