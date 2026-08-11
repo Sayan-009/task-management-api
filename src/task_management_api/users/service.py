@@ -122,6 +122,16 @@ class UserService:
         )
         
         
+    @staticmethod
+    def deactivate_user(
+        session: Session,
+        current_user: User
+    ) -> None:
+        UserRepository.deactivate(
+            session,
+            current_user
+        )
+       
                 
         
                 

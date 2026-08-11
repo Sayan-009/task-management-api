@@ -132,3 +132,18 @@ def password_update(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(exc)
         ) from exc
+        
+        
+
+@router.patch("/me/deactivate", response_model=MessageResponse, status_code=status.HTTP_200_OK)
+def user_deactivate(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db)
+) -> MessageResponse:
+    
+    UserService.deactivate_user(session, current_user)
+    
+    
+    session.commit()
+            
+    return MessageResponse(message="User deactivated successfully")
