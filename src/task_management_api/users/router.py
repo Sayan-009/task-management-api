@@ -8,7 +8,7 @@ from task_management_api.users.schema import (
     UserResponse,
     UserLogin,
     TokenResponse,
-    )
+)
 from task_management_api.users.service import UserService
 from task_management_api.core.token import TokenService
 from task_management_api.core.dependencies import get_current_user
