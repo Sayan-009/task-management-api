@@ -50,3 +50,7 @@ class MessageResponse(BaseModel):
 
 class UserStatusUpdate(BaseModel):
     is_active: bool
+    
+    
+class UserRoleUpdate(BaseModel):
+    role: UserRole

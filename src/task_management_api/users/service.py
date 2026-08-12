@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from task_management_api.core.security import hash_password, verify_password
 from task_management_api.users.model import User
 from task_management_api.users.repository import UserRepository
-from task_management_api.users.schema import UserUpdate, UserStatusUpdate
+from task_management_api.users.schema import UserUpdate, UserStatusUpdate, UserRoleUpdate
+
 
 
 class UserService:
@@ -165,6 +166,34 @@ class UserService:
             target_user,
             user_status,
         )
+        
+        
+        
+    @staticmethod
+    def user_role_update(
+        admin: User,
+        session: Session,
+        user_id: UUID,
+        role: UserRoleUpdate,
+    ) -> None:
+        
+        target_user = UserRepository.get_by_id(
+            session,
+            user_id,
+        )
+
+        if target_user is None:
+            raise ValueError("User not found")
+
+        if admin.id == user_id:
+            raise ValueError("Admin can't change own role")
+
+        UserRepository.role_update(
+            session,
+            target_user,
+            role,
+        )       
+        
                     
         
                 

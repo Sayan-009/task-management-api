@@ -12,12 +12,14 @@ from task_management_api.users.schema import (
     UserUpdate,
     ChangePasswordRequest,
     MessageResponse,
-    UserStatusUpdate
+    UserStatusUpdate,
+    UserRoleUpdate
 )
 from task_management_api.users.service import UserService
 from task_management_api.core.token import TokenService
 from task_management_api.core.dependencies import get_current_user
 from task_management_api.users.dependencies import require_admin
+
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -178,6 +180,31 @@ def update_user_status(
         session.commit()
         
         return MessageResponse(message="User status updated successfully")
+    
+    except ValueError as exc:
+        
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        ) from exc
+        
+        
+        
+@router.patch("/{user_id}/role", response_model=MessageResponse, status_code=status.HTTP_200_OK)
+def update_user_role(
+    user_id: UUID,
+    role: UserRoleUpdate,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_db)
+) -> MessageResponse:
+    
+    try:
+        UserService.user_role_update(admin, session, user_id, role)
+        
+        session.commit()
+        
+        return MessageResponse(message="User role updated successfully")
     
     except ValueError as exc:
         

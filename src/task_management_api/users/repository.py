@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 
 
 from task_management_api.users.model import User
-from task_management_api.users.schema import UserStatusUpdate
+from task_management_api.users.schema import UserStatusUpdate, UserRoleUpdate
+
 
 
 class UserRepository:
@@ -83,6 +84,16 @@ class UserRepository:
         user_status: UserStatusUpdate,
     ) -> None:
         user.is_active = user_status.is_active
+        session.flush()
+        
+        
+    @staticmethod
+    def role_update(
+        session: Session,
+        user: User,
+        role: UserRoleUpdate,
+    ) -> None:
+        user.role = role.role
         session.flush()
                 
     
