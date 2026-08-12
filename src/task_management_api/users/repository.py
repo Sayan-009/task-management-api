@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 
 from task_management_api.users.model import User
+from task_management_api.users.schema import UserStatusUpdate
 
 
 class UserRepository:
@@ -75,6 +76,15 @@ class UserRepository:
         session.flush()
         
         
+    @staticmethod
+    def status_update(
+        session: Session,
+        user: User,
+        user_status: UserStatusUpdate,
+    ) -> None:
+        user.is_active = user_status.is_active
+        session.flush()
+                
     
     @staticmethod
     def get_all(

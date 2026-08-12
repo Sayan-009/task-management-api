@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -10,7 +11,8 @@ from task_management_api.users.schema import (
     TokenResponse,
     UserUpdate,
     ChangePasswordRequest,
-    MessageResponse
+    MessageResponse,
+    UserStatusUpdate
 )
 from task_management_api.users.service import UserService
 from task_management_api.core.token import TokenService
@@ -160,3 +162,27 @@ def all_users(
     session: Session = Depends(get_db),
 ) -> list[UserResponse]:
     return UserService.get_all_user(session)
+
+
+@router.patch("/{user_id}/status", response_model=MessageResponse, status_code=status.HTTP_200_OK)
+def update_user_status(
+    user_id: UUID,
+    user_status: UserStatusUpdate,
+    admin: User = Depends(require_admin),
+    session: Session = Depends(get_db)
+) -> MessageResponse:
+    
+    try:
+        UserService.user_status_update(admin, session, user_id, user_status)
+        
+        session.commit()
+        
+        return MessageResponse(message="User status updated successfully")
+    
+    except ValueError as exc:
+        
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        ) from exc

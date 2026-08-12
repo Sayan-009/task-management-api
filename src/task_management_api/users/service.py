@@ -1,9 +1,10 @@
+from uuid import UUID
 from sqlalchemy.orm import Session
 
 from task_management_api.core.security import hash_password, verify_password
 from task_management_api.users.model import User
 from task_management_api.users.repository import UserRepository
-from task_management_api.users.schema import UserUpdate
+from task_management_api.users.schema import UserUpdate, UserStatusUpdate
 
 
 class UserService:
@@ -138,6 +139,32 @@ class UserService:
         session: Session,
     ) -> list[User]:
         return UserRepository.get_all(session)
+    
+    
+    @staticmethod
+    def user_status_update(
+        admin: User,
+        session: Session,
+        user_id: UUID,
+        user_status: UserStatusUpdate,
+    ) -> None:
+        
+        target_user = UserRepository.get_by_id(
+            session,
+            user_id,
+        )
+
+        if target_user is None:
+            raise ValueError("User not found")
+
+        if admin.id == user_id:
+            raise ValueError("Admin can't change own status")
+
+        UserRepository.status_update(
+            session,
+            target_user,
+            user_status,
+        )
                     
         
                 
