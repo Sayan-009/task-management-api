@@ -2,10 +2,11 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from uuid_utils import uuid7
-from sqlalchemy import UUID as SQLUUID, String, DateTime
+from sqlalchemy import UUID as SQLUUID, String, DateTime, Enum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from task_management_api.db.base import Base
+from task_management_api.users.enums import UserRole
 
 
 
@@ -28,6 +29,12 @@ class User(Base):
         nullable=False,
         unique=True,
         index=True
+    )
+    
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole),
+        nullable=False,
+        default=UserRole.USER
     )
     
     password_hash: Mapped[str] = mapped_column(
