@@ -47,3 +47,6 @@ class ChangePasswordRequest(BaseModel):
 class MessageResponse(BaseModel):
     message: str
 
+
+class UserStatusUpdate(BaseModel):
+    is_active: bool
