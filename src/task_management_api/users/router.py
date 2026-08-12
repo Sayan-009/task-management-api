@@ -15,6 +15,7 @@ from task_management_api.users.schema import (
 from task_management_api.users.service import UserService
 from task_management_api.core.token import TokenService
 from task_management_api.core.dependencies import get_current_user
+from task_management_api.users.dependencies import require_admin
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -147,3 +148,15 @@ def user_deactivate(
     session.commit()
             
     return MessageResponse(message="User deactivated successfully")
+
+
+@router.get(
+    "/",
+    response_model=list[UserResponse],
+    status_code=status.HTTP_200_OK,
+)
+def all_users(
+    current_user: User = Depends(require_admin),
+    session: Session = Depends(get_db),
+) -> list[UserResponse]:
+    return UserService.get_all_user(session)

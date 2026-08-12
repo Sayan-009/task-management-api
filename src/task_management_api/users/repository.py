@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 
 from task_management_api.users.model import User
-from task_management_api.users.schema import UserUpdate
+
 
 class UserRepository:
     
@@ -74,5 +74,15 @@ class UserRepository:
         
         session.flush()
         
+        
+    
+    @staticmethod
+    def get_all(
+        session: Session,
+    ) -> list[User]:
+        statement = select(User)
+
+        return session.execute(statement).scalars().all()
+            
        
             

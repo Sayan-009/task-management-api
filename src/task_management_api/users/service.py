@@ -132,7 +132,13 @@ class UserService:
             current_user
         )
        
-                
+       
+    @staticmethod
+    def get_all_user(
+        session: Session,
+    ) -> list[User]:
+        return UserRepository.get_all(session)
+                    
         
                 
         
