@@ -8,6 +8,10 @@ from task_management_api.tasks.repository import TaskRepository
 from task_management_api.tasks.schema import (
     TaskCreate
 )
+from task_management_api.core.exceptions import (
+    TaskNotFoundError,
+    ForbiddenOperationError
+)
 
 
 
@@ -34,3 +38,19 @@ class TaskService:
             session,
             owner_id
         )
+        
+        
+    @staticmethod
+    def get_task(
+        session: Session,
+        current_user: User,
+        task_id: UUID,
+    ) -> Task | None:
+        task = TaskRepository.get_by_id(session, task_id)
+        if task is None:
+            raise TaskNotFoundError("Task not found")
+        
+        if task.owner_id != current_user.id:
+            raise ForbiddenOperationError("You don't have permission to access this task")
+        
+        return TaskRepository.get_by_id(session, task_id)
