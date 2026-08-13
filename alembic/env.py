@@ -3,8 +3,8 @@ from logging.config import fileConfig
 from alembic import context
 
 from task_management_api.db.base import Base
+from task_management_api.db import models
 from task_management_api.db.database import engine
-from task_management_api.users.model import User
 
 
 # this is the Alembic Config object, which provides
