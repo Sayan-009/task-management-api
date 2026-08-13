@@ -24,3 +24,13 @@ class TaskService:
             owner_id,
             task
         )
+        
+    @staticmethod
+    def get_user_tasks(
+        session: Session,
+        owner_id: UUID,
+    ) -> list[Task]:
+        return TaskRepository.get_by_owner(
+            session,
+            owner_id
+        )
