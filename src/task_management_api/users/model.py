@@ -3,10 +3,14 @@ from uuid import UUID
 
 from uuid_utils import uuid7
 from sqlalchemy import UUID as SQLUUID, String, DateTime, Enum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from task_management_api.db.base import Base
 from task_management_api.users.enums import UserRole
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from task_management_api.tasks.model import Task
 
 
 
@@ -58,4 +62,8 @@ class User(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
+    )
+    
+    tasks: Mapped[list["Task"]] = relationship(
+        back_populates="owner"
     )

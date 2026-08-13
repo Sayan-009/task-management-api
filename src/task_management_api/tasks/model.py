@@ -1,0 +1,68 @@
+from uuid import UUID
+from datetime import datetime, timezone
+
+from uuid_utils import uuid7
+from sqlalchemy import UUID as SQLUUID, String, DateTime, Enum, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+
+from task_management_api.db.base import Base
+from task_management_api.tasks.enums import (
+    TaskPriority, TaskStatus
+)
+from task_management_api.users.model import User
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+    
+    id: Mapped[UUID] = mapped_column(
+        SQLUUID(as_uuid=True),
+        primary_key=True,
+        default=lambda:UUID(str(uuid7())),
+    )
+    
+    title: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False,
+    )
+    
+    description: Mapped[str | None] = mapped_column(
+        String(2000),
+        nullable=True,
+    )
+    
+    status: Mapped[TaskStatus] = mapped_column(
+        Enum(TaskStatus),
+        nullable=False,
+        default=TaskStatus.PENDING
+    )
+    
+    priority: Mapped[TaskPriority] = mapped_column(
+        Enum(TaskPriority),
+        nullable=False,
+        default=TaskPriority.MEDIUM
+    )
+    
+    owner_id: Mapped[UUID] = mapped_column(
+        SQLUUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+    
+    owner: Mapped[User] = relationship(
+        back_populates="tasks"
+    )
+    
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+        
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )    

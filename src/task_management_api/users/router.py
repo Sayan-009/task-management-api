@@ -143,11 +143,10 @@ def password_update(
 @router.patch("/me/deactivate", response_model=MessageResponse, status_code=status.HTTP_200_OK)
 def user_deactivate(
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db)
+    session: Session = Depends(get_db),
 ) -> MessageResponse:
     
     UserService.deactivate_user(session, current_user)
-    
     
     session.commit()
             
