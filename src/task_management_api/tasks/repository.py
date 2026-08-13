@@ -27,5 +27,17 @@ class TaskRepository:
         session.flush()
         
         return new_task
+    
+    
+    @staticmethod
+    def get_by_owner(
+        session: Session,
+        owner_id: UUID,
+    ) -> list[Task]:
+        statement = Select(Task).where(Task.owner_id == owner_id)
+        
+        tasks = session.execute(statement).scalars().all()
+        
+        return tasks
         
         

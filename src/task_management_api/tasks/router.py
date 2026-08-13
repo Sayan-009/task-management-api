@@ -6,10 +6,10 @@ from task_management_api.db.session import get_db
 from task_management_api.core.dependencies import get_current_user
 from task_management_api.users.model import User
 from task_management_api.tasks.model import Task
+from task_management_api.tasks.service import TaskService
 from task_management_api.tasks.schema import (
     TaskCreate, TaskResponse
 )
-from task_management_api.tasks.service import TaskService
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -35,3 +35,13 @@ def create_task(
     except Exception:
         session.rollback()
         raise
+    
+    
+@router.get("/", response_model=list[TaskResponse], status_code=status.HTTP_200_OK)
+def get_user_tasks(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> list[TaskResponse]:
+     
+    return TaskService.get_user_tasks(session, current_user.id)
+    
