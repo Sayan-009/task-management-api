@@ -78,8 +78,8 @@ def get_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
         ) from exc
-
-
+        
+        
 @router.patch("/{task_id}", response_model=TaskResponse, status_code=status.HTTP_200_OK)
 def update_task(
     task_id: UUID,
@@ -113,3 +113,30 @@ def update_task(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc)
         ) from exc
+        
+        
+
+@router.delete("/{task_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(
+    task_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> None:
+    try:
+        TaskService.delete_task(
+            session, current_user, task_id,
+        )
+        
+        session.commit()
+    
+    except TaskNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    
+    except ForbiddenOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc     
