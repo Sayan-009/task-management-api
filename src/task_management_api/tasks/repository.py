@@ -6,6 +6,7 @@ from typing import Any
 from task_management_api.tasks.model import Task
 from task_management_api.tasks.schema import (
     TaskCreate,
+    TaskStatusUpdate
 )
 
 class TaskRepository:
@@ -65,6 +66,17 @@ class TaskRepository:
         )
 
         return session.execute(statement).scalar_one_or_none()
+    
+    
+    @staticmethod
+    def status_update(
+        session: Session,
+        task: Task,
+        task_status: TaskStatusUpdate,
+    ) -> Task:
+        task.status = task_status.status
+        session.flush()
+        return task
     
     
     @staticmethod

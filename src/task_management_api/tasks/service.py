@@ -8,6 +8,7 @@ from task_management_api.tasks.repository import TaskRepository
 from task_management_api.tasks.schema import (
     TaskCreate,
     TaskUpdate,
+    TaskStatusUpdate
 )
 from task_management_api.core.exceptions import (
     TaskNotFoundError,
@@ -84,6 +85,27 @@ class TaskService:
             updates,
         )
         
+        
+    @staticmethod
+    def status_update(
+        session: Session,
+        current_user: User,
+        task_id: UUID,
+        task_status: TaskStatusUpdate,
+    ) -> Task:
+        task = TaskRepository.get_by_id(session, task_id)
+                
+        if task is None:
+            raise TaskNotFoundError("Task not found")
+                
+        if current_user.id != task.owner_id:
+            raise ForbiddenOperationError("You don't have permission to update this task status")
+        
+        return TaskRepository.status_update(
+            session,
+            task,
+            task_status
+        )
     
     
     @staticmethod

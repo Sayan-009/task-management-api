@@ -34,7 +34,8 @@ class TaskUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     priority: TaskPriority | None = None
     
-
+class TaskStatusUpdate(BaseModel):
+    status: TaskStatus
 
     
     
