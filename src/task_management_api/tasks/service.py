@@ -6,11 +6,13 @@ from task_management_api.users.model import User
 from task_management_api.tasks.model import Task
 from task_management_api.tasks.repository import TaskRepository
 from task_management_api.tasks.schema import (
-    TaskCreate
+    TaskCreate,
+    TaskUpdate
 )
 from task_management_api.core.exceptions import (
     TaskNotFoundError,
-    ForbiddenOperationError
+    ForbiddenOperationError,
+    NoUpdateFieldsError
 )
 
 
@@ -54,3 +56,30 @@ class TaskService:
             raise ForbiddenOperationError("You don't have permission to access this task")
         
         return TaskRepository.get_by_id(session, task_id)
+    
+    
+    @staticmethod
+    def update_task(
+        session: Session,
+        current_user: User,
+        task_id: UUID,
+        update_task: TaskUpdate,
+    ) -> Task:
+        task = TaskRepository.get_by_id(session, task_id)
+        
+        if task is None:
+            raise TaskNotFoundError("Task not found")
+        
+        if current_user.id != task.owner_id:
+            raise ForbiddenOperationError("You don't have permission to update this task")
+        
+        updates = update_task.model_dump(exclude_unset=True)
+        
+        if not updates:
+            raise NoUpdateFieldsError("At least one field is required to update the task")
+        
+        return TaskRepository.update(
+            session,
+            task,
+            updates,
+        )
