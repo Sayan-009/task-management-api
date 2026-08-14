@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from task_management_api.db.session import get_db
@@ -75,6 +76,35 @@ def login_user(
             detail=str(exc),
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
+
+
+
+@router.post("/token", response_model=TokenResponse)
+def login_for_swagger(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_db),
+) -> TokenResponse:
+    try:
+        user = UserService.login_user(
+            session=session,
+            email=form_data.username,
+            password=form_data.password,
+        )
+        
+        access_token = TokenService.create_access_token(subject=str(user.id))
+        
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+        )
+        
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
 
 
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
