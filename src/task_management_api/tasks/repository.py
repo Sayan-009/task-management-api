@@ -6,7 +6,6 @@ from typing import Any
 from task_management_api.tasks.model import Task
 from task_management_api.tasks.schema import (
     TaskCreate,
-    TaskUpdate,
 )
 
 class TaskRepository:
@@ -66,5 +65,14 @@ class TaskRepository:
         )
 
         return session.execute(statement).scalar_one_or_none()
+    
+    
+    @staticmethod
+    def delete(
+        session: Session,
+        task: Task,
+    ) -> None:
+        session.delete(task)
+        session.flush()
             
         

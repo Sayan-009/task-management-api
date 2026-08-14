@@ -7,7 +7,7 @@ from task_management_api.tasks.model import Task
 from task_management_api.tasks.repository import TaskRepository
 from task_management_api.tasks.schema import (
     TaskCreate,
-    TaskUpdate
+    TaskUpdate,
 )
 from task_management_api.core.exceptions import (
     TaskNotFoundError,
@@ -83,3 +83,24 @@ class TaskService:
             task,
             updates,
         )
+        
+    
+    
+    @staticmethod
+    def delete_task(
+        session: Session,
+        current_user: User,
+        task_id: UUID,
+    ) -> None:
+        task = TaskRepository.get_by_id(session, task_id)
+        
+        if task is None:
+            raise TaskNotFoundError("Task not found")
+        
+        if current_user.id != task.owner_id:
+            raise ForbiddenOperationError("You don't have permission to delete this task")
+        
+        TaskRepository.delete(
+            session,
+            task,
+        )    
