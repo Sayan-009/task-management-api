@@ -11,7 +11,7 @@ from task_management_api.users.repository import UserRepository
 from task_management_api.core.token import TokenService
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/users/login",
+    tokenUrl="/users/token",
 )
 
 def get_current_user(
