@@ -9,7 +9,7 @@ from task_management_api.users.model import User
 from task_management_api.tasks.model import Task
 from task_management_api.tasks.service import TaskService
 from task_management_api.tasks.schema import (
-    TaskCreate, TaskResponse, TaskUpdate
+    TaskCreate, TaskResponse, TaskUpdate, TaskStatusUpdate
 )
 from task_management_api.core.exceptions import (
     TaskNotFoundError,
@@ -113,6 +113,37 @@ def update_task(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc)
         ) from exc
+        
+        
+@router.patch("/{task_id}/status", response_model=TaskResponse, status_code=status.HTTP_200_OK)
+def task_status_update(
+    task_id: UUID,
+    task_status: TaskStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> TaskResponse:
+    try:
+        task = TaskService.status_update(
+            session,
+            current_user,
+            task_id,
+            task_status=task_status,
+        )
+        
+        session.commit()
+        return task
+    
+    except TaskNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    
+    except ForbiddenOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc      
         
         
 
