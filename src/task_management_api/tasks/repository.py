@@ -1,10 +1,12 @@
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from typing import Any
 
 from task_management_api.tasks.model import Task
 from task_management_api.tasks.schema import (
-    TaskCreate
+    TaskCreate,
+    TaskUpdate,
 )
 
 class TaskRepository:
@@ -27,6 +29,19 @@ class TaskRepository:
         session.flush()
         
         return new_task
+    
+    @staticmethod
+    def update(
+        session: Session,
+        task: Task,
+        updates: dict[str, Any],
+    ) -> Task:
+        for field, value in updates.items():
+            setattr(task, field, value)
+            
+        session.add(task)
+        session.flush()
+        return task
     
     
     @staticmethod

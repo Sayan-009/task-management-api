@@ -8,3 +8,6 @@ class TaskNotFoundError(Exception):
 
 class ForbiddenOperationError(Exception):
     pass
+
+class NoUpdateFieldsError(Exception):
+    pass
