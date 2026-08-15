@@ -1,3 +1,4 @@
+import math
 from uuid import UUID
 from sqlalchemy.orm import Session
 
@@ -5,10 +6,12 @@ from sqlalchemy.orm import Session
 from task_management_api.users.model import User
 from task_management_api.tasks.model import Task
 from task_management_api.tasks.repository import TaskRepository
+from task_management_api.tasks.enums import (TaskPriority, TaskStatus, TaskOrder, TaskSort)
 from task_management_api.tasks.schema import (
     TaskCreate,
     TaskUpdate,
-    TaskStatusUpdate
+    TaskStatusUpdate,
+    TaskListResponse
 )
 from task_management_api.core.exceptions import (
     TaskNotFoundError,
@@ -36,10 +39,35 @@ class TaskService:
     def get_user_tasks(
         session: Session,
         owner_id: UUID,
-    ) -> list[Task]:
-        return TaskRepository.get_by_owner(
+        search: str | None = None,
+        status: TaskStatus | None = None,
+        priority: TaskPriority | None = None,
+        sort_by: TaskSort | None = None,
+        order: TaskOrder = TaskOrder.ASC,
+        page: int = 1,
+        limit: int = 10,
+    ) -> TaskListResponse:
+        
+        tasks, total = TaskRepository.get_by_owner(
             session,
-            owner_id
+            owner_id,
+            search,
+            status,
+            priority,
+            sort_by,
+            order,
+            page,
+            limit
+        )
+        
+        total_pages = math.ceil(total / limit) if total > 0 else 0
+        
+        return TaskListResponse(
+            tasks=tasks,
+            page=page,
+            limit=limit,
+            total=total,
+            total_pages=total_pages,
         )
         
         

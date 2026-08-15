@@ -1,8 +1,10 @@
 from uuid import UUID
-from sqlalchemy import select
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session
 from typing import Any
 
+
+from task_management_api.tasks.enums import (TaskPriority, TaskStatus, TaskOrder, TaskSort)
 from task_management_api.tasks.model import Task
 from task_management_api.tasks.schema import (
     TaskCreate,
@@ -48,12 +50,66 @@ class TaskRepository:
     def get_by_owner(
         session: Session,
         owner_id: UUID,
-    ) -> list[Task]:
+        search: str | None = None,
+        status: TaskStatus | None = None,
+        priority: TaskPriority | None = None,
+        sort_by: TaskSort | None = None,
+        order: TaskOrder = TaskOrder.ASC,
+        page: int = 1,
+        limit: int = 10,
+    ) -> tuple[list[Task], int]:
+        
         statement = select(Task).where(Task.owner_id == owner_id)
+
+        # Search
+        if search is not None:
+            search_pattern = f"%{search}%"
+
+            statement = statement.where(
+                or_(
+                    Task.title.ilike(search_pattern),
+                    Task.description.ilike(search_pattern),
+                )
+            )
+        
+        # Filtering
+        if status is not None:
+            statement = statement.where(Task.status == status)
+            
+        if priority is not None:
+            statement = statement.where(Task.priority == priority)
+            
+        
+        # Sorting
+        if sort_by is not None:
+            sort_column = {
+                TaskSort.TITLE: Task.title,
+                TaskSort.CREATED_AT: Task.created_at,
+                TaskSort.UPDATED_AT: Task.updated_at,
+                TaskSort.STATUS: Task.status,
+                TaskSort.PRIORITY: Task.priority,
+            }[sort_by]
+
+            if order == TaskOrder.DESC:
+                statement = statement.order_by(sort_column.desc())
+            else:
+                statement = statement.order_by(sort_column.asc())
+        
+        # Count BEFORE pagination
+        total = session.execute(
+            select(func.count()).select_from(
+                statement.subquery()
+            )
+        ).scalar_one()
+        
+        # Pagination
+        offset = (page - 1) * limit
+        
+        statement = statement.offset(offset).limit(limit)
         
         tasks = session.execute(statement).scalars().all()
         
-        return tasks
+        return tasks, total
     
     
     @staticmethod

@@ -1,4 +1,5 @@
 from uuid import UUID
+from fastapi import Query
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, status, HTTPException
 
@@ -8,8 +9,9 @@ from task_management_api.core.dependencies import get_current_user
 from task_management_api.users.model import User
 from task_management_api.tasks.model import Task
 from task_management_api.tasks.service import TaskService
+from task_management_api.tasks.enums import (TaskPriority, TaskStatus, TaskOrder, TaskSort)
 from task_management_api.tasks.schema import (
-    TaskCreate, TaskResponse, TaskUpdate, TaskStatusUpdate
+    TaskCreate, TaskResponse, TaskUpdate, TaskStatusUpdate, TaskListResponse
 )
 from task_management_api.core.exceptions import (
     TaskNotFoundError,
@@ -43,13 +45,30 @@ def create_task(
         raise
     
     
-@router.get("/", response_model=list[TaskResponse], status_code=status.HTTP_200_OK)
+@router.get("/", response_model=TaskListResponse, status_code=status.HTTP_200_OK)
 def get_user_tasks(
+    search: str | None = None,
+    status: TaskStatus | None = Query(default=None),
+    priority: TaskPriority | None = Query(default=None),
+    sort_by: TaskSort | None = None,
+    order: TaskOrder = TaskOrder.ASC,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
-) -> list[TaskResponse]:
+    page: int = 1,
+    limit: int = 10,
+) -> TaskListResponse:
      
-    return TaskService.get_user_tasks(session, current_user.id)
+    return TaskService.get_user_tasks(
+        session, 
+        current_user.id,
+        search,
+        status,
+        priority,
+        sort_by,
+        order,
+        page,
+        limit
+    )
 
 
 @router.get("/{task_id}", response_model=TaskResponse | None, status_code=status.HTTP_200_OK)
