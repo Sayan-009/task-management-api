@@ -29,6 +29,14 @@ class TaskResponse(BaseModel):
     updated_at: datetime
     
     
+class TaskListResponse(BaseModel):
+    tasks: list[TaskResponse]
+    page: int
+    limit: int
+    total: int
+    total_pages: int
+    
+    
 class TaskUpdate(BaseModel):
     title: str | None = Field(default=None, min_length = 1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
