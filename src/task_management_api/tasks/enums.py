@@ -23,3 +23,9 @@ class TaskSort(str, Enum):
     UPDATED_AT = "updated_at"
     STATUS = "status"
     PRIORITY = "priority"
+    
+    
+class AssignedTaskSort(str, Enum):
+    TITLE = "title"
+    STATUS = "status"
+    PRIORITY = "priority"
