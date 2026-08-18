@@ -29,6 +29,29 @@ class TaskResponse(BaseModel):
     updated_at: datetime
     
     
+class TaskOwnerResponse(BaseModel):
+    id: UUID
+    name: str
+    status: TaskStatus
+
+
+class TaskParticipantResponse(BaseModel):
+    user_id: UUID
+    name: str
+    status: TaskStatus
+
+
+class TaskDetailResponse(BaseModel):
+    id: UUID
+    title: str
+    description: str | None = None
+    priority: TaskPriority
+    status: TaskStatus
+
+    owner: TaskOwnerResponse
+    assignees: list[TaskParticipantResponse]
+    
+    
 class TaskListResponse(BaseModel):
     tasks: list[TaskResponse]
     page: int
@@ -44,6 +67,39 @@ class TaskUpdate(BaseModel):
     
 class TaskStatusUpdate(BaseModel):
     status: TaskStatus
+    
+
+class TaskAssigneeCreate(BaseModel):
+    assignee_ids: list[UUID] = Field(min_length=1)
+    
+    
+class TaskAssigneeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    user_id: UUID
+    task_id: UUID
+    status: TaskStatus
+    created_at: datetime
+    
+    
+class AssignedTaskResponse(BaseModel):
+    id: UUID
+    title: str
+    description: str | None
+    priority: TaskPriority
+    my_status: TaskStatus
+    owner: TaskOwnerResponse
+    
+    
+class AssignedTaskListResponse(BaseModel):
+    assigned_tasks: list[AssignedTaskResponse]
+    page: int
+    limit: int
+    total: int
+    total_pages: int
+    
+    
+
 
     
     

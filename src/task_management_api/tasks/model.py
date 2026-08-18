@@ -11,6 +11,7 @@ from task_management_api.tasks.enums import (
     TaskPriority, TaskStatus
 )
 from task_management_api.users.model import User
+from task_management_api.tasks.assignee_model import TaskAssignee
 
 
 class Task(Base):
@@ -66,3 +67,8 @@ class Task(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )    
+    
+    assignees: Mapped[list["TaskAssignee"]] = relationship(
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )

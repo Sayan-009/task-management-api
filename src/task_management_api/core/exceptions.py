@@ -11,3 +11,20 @@ class ForbiddenOperationError(Exception):
 
 class NoUpdateFieldsError(Exception):
     pass
+
+class AlreadyAssignedError(Exception):
+    pass
+
+
+class DuplicateAssigneeError(Exception):
+    pass
+
+class UserNotFoundError(Exception):
+    pass
+
+class UserInactiveError(Exception):
+    pass
+
+
+class AssignmentNotFoundError(Exception):
+    pass

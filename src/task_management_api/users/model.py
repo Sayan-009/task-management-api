@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from task_management_api.tasks.model import Task
+    from task_management_api.tasks.assignee_model import TaskAssignee
 
 
 
@@ -66,4 +67,8 @@ class User(Base):
     
     tasks: Mapped[list["Task"]] = relationship(
         back_populates="owner"
+    )
+    
+    assigned_tasks: Mapped[list["TaskAssignee"]] = relationship(
+        back_populates="user",
     )
