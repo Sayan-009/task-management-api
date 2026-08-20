@@ -11,9 +11,16 @@ from task_management_api.tasks.model import Task
 from task_management_api.tasks.service import TaskService
 from task_management_api.tasks.enums import (TaskPriority, TaskStatus, TaskOrder, TaskSort, AssignedTaskSort)
 from task_management_api.tasks.schema import (
-    TaskCreate, TaskResponse, TaskUpdate, TaskStatusUpdate, TaskListResponse,
-    TaskAssigneeCreate, TaskAssigneeResponse, TaskDetailResponse, AssignedTaskResponse,
-    AssignedTaskListResponse
+    TaskCreate, 
+    TaskResponse, 
+    TaskUpdate, 
+    TaskStatusUpdate, 
+    TaskListResponse,
+    TaskAssigneeCreate, 
+    TaskAssigneeResponse, 
+    TaskDetailResponse, 
+    AssignedTaskListResponse,
+    TaskActivityListResponse
 )
 from task_management_api.core.exceptions import (
     TaskNotFoundError,
@@ -23,7 +30,9 @@ from task_management_api.core.exceptions import (
     UserNotFoundError,
     UserInactiveError,
     AlreadyAssignedError,
-    AssignmentNotFoundError
+    AssignmentNotFoundError,
+    TaskAlreadyDeletedError,
+    TaskNotDeletedError
 )
 
 
@@ -101,6 +110,26 @@ def get_assigned_task(
         order,
         page,
         limit
+    )
+    
+    
+@router.get(
+    "/deleted",
+    response_model=TaskListResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_deleted_tasks(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> TaskListResponse:
+
+    return TaskService.get_deleted_tasks(
+        session,
+        current_user,
+        page,
+        limit,
     )
 
 
@@ -197,33 +226,124 @@ def task_status_update(
             detail=str(exc),
         ) from exc      
         
-        
 
-@router.delete("/{task_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(
+
+@router.delete(
+    "/{task_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def hard_delete_task(
+    task_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> None:
+
+    try:
+        TaskService.hard_delete_task(
+            session,
+            current_user,
+            task_id,
+        )
+
+        session.commit()
+
+    except TaskNotFoundError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except ForbiddenOperationError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+
+    except TaskNotDeletedError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc   
+        
+        
+@router.delete("/{task_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT,)
+def soft_delete_task(
     task_id: UUID,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ) -> None:
     try:
-        TaskService.delete_task(
-            session, current_user, task_id,
+        TaskService.soft_delete_task(
+            session,
+            current_user,
+            task_id,
         )
-        
+
         session.commit()
-    
+
     except TaskNotFoundError as exc:
+        session.rollback()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
-    
+
     except ForbiddenOperationError as exc:
+        session.rollback()
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
-        ) from exc     
+        ) from exc
+
+    except TaskAlreadyDeletedError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
         
+        
+@router.post("/{task_id}/restore", response_model=TaskResponse, status_code=status.HTTP_200_OK)
+def restore_task(
+    task_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> TaskResponse:
+
+    try:
+        task = TaskService.restore_task(
+            session,
+            current_user,
+            task_id,
+        )
+
+        session.commit()
+
+        return task
+
+    except TaskNotFoundError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except ForbiddenOperationError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+
+    except TaskNotDeletedError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
         
 
 @router.post(
@@ -358,6 +478,71 @@ def update_my_status(
         
         return task_assignee
     
+    except TaskNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        ) from exc
+        
+    except ForbiddenOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc)
+        ) from exc
+        
+        
+@router.delete(
+    "/{task_id}/my-assignment",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def leave_task(
+    task_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> None:
+
+    try:
+        TaskService.leave_task(
+            session,
+            current_user,
+            task_id,
+        )
+
+        session.commit()
+
+    except TaskNotFoundError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except AssignmentNotFoundError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+        
+        
+        
+@router.get("/{task_id}/activities", response_model=TaskActivityListResponse, status_code=status.HTTP_200_OK)
+def get_task_activities(
+    task_id: UUID,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> TaskActivityListResponse:
+    try:
+        return TaskService.get_task_activities(
+            session,
+            task_id,
+            current_user,
+            page, 
+            limit,
+        )
+        
     except TaskNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

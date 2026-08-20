@@ -2,16 +2,21 @@ from uuid import UUID
 from datetime import datetime, timezone
 
 from uuid_utils import uuid7
-from sqlalchemy import UUID as SQLUUID, String, DateTime, Enum, ForeignKey
+from sqlalchemy import UUID as SQLUUID, String, Boolean, DateTime, Enum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 from task_management_api.db.base import Base
 from task_management_api.tasks.enums import (
-    TaskPriority, TaskStatus
+    TaskPriority, 
+    TaskStatus
 )
 from task_management_api.users.model import User
 from task_management_api.tasks.assignee_model import TaskAssignee
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from task_management_api.tasks.activity_model import TaskActivity
 
 
 class Task(Base):
@@ -68,7 +73,23 @@ class Task(Base):
         nullable=False,
     )    
     
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    
     assignees: Mapped[list["TaskAssignee"]] = relationship(
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )
+    
+    activities: Mapped[list["TaskActivity"]] = relationship(
         back_populates="task",
         cascade="all, delete-orphan",
     )

@@ -1,2 +1,4 @@
 from task_management_api.users.model import User
 from task_management_api.tasks.model import Task
+from task_management_api.tasks.activity_model import TaskActivity
+from task_management_api.tasks.assignee_model import TaskAssignee
