@@ -28,3 +28,10 @@ class UserInactiveError(Exception):
 
 class AssignmentNotFoundError(Exception):
     pass
+
+
+class TaskAlreadyDeletedError(Exception):
+    pass
+
+class TaskNotDeletedError(Exception):
+    pass

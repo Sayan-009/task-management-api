@@ -1,8 +1,8 @@
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
-from task_management_api.tasks.enums import TaskPriority, TaskStatus
+from task_management_api.tasks.enums import TaskPriority, TaskStatus, TaskActivityType
 
 
 class TaskCreate(BaseModel):
@@ -93,6 +93,30 @@ class AssignedTaskResponse(BaseModel):
     
 class AssignedTaskListResponse(BaseModel):
     assigned_tasks: list[AssignedTaskResponse]
+    page: int
+    limit: int
+    total: int
+    total_pages: int
+    
+    
+class ActivityUserResponse(BaseModel):
+    id: UUID
+    name: str
+    email: EmailStr
+
+
+class TaskActivityResponse(BaseModel):
+    id: UUID
+    action: TaskActivityType
+    field: str | None = None
+    old_value: str | None = None
+    new_value: str | None = None
+    user: ActivityUserResponse
+    created_at: datetime
+
+
+class TaskActivityListResponse(BaseModel):
+    activities: list[TaskActivityResponse]
     page: int
     limit: int
     total: int

@@ -29,3 +29,16 @@ class AssignedTaskSort(str, Enum):
     TITLE = "title"
     STATUS = "status"
     PRIORITY = "priority"
+    
+
+class TaskActivityType(str, Enum):
+    CREATED = "created"
+    UPDATED = "updated"
+    STATUS_CHANGED = "status_changed"
+    PRIORITY_CHANGED = "priority_changed"
+    ASSIGNEE_ADDED = "assignee_added"
+    ASSIGNEE_REMOVED = "assignee_removed"
+    DELETED = "deleted"
+    RESTORED = "restored"
+    
+    

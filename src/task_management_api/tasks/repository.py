@@ -1,17 +1,25 @@
 from uuid import UUID
+from datetime import datetime, timezone
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import Session, joinedload
 from typing import Any
 
 
-from task_management_api.tasks.enums import (TaskPriority, TaskStatus, TaskOrder, TaskSort, AssignedTaskSort)
-from task_management_api.users.model import User
+from task_management_api.tasks.enums import (
+    TaskPriority, 
+    TaskStatus, 
+    TaskOrder, 
+    TaskSort, 
+    AssignedTaskSort,
+    TaskActivityType
+)
 from task_management_api.tasks.model import Task
+from task_management_api.tasks.assignee_model import TaskAssignee
+from task_management_api.tasks.activity_model import TaskActivity
 from task_management_api.tasks.schema import (
     TaskCreate,
     TaskStatusUpdate,
 )
-from task_management_api.tasks.assignee_model import TaskAssignee
 
 class TaskRepository:
     
@@ -127,6 +135,19 @@ class TaskRepository:
     
     
     @staticmethod
+    def get_active_by_id(
+        session: Session,
+        task_id: UUID,
+    ) -> Task | None:
+        statement = select(Task).where(
+            Task.id == task_id,
+            Task.is_deleted.is_(False),
+        )
+
+        return session.execute(statement).scalar_one_or_none()
+    
+    
+    @staticmethod
     def status_update(
         session: Session,
         task: Task,
@@ -138,12 +159,38 @@ class TaskRepository:
     
     
     @staticmethod
-    def delete(
+    def soft_delete_task(
+        session: Session,
+        task: Task,
+    ) -> Task:
+        task.is_deleted = True
+        task.deleted_at = datetime.now(timezone.utc)
+
+        session.flush()
+
+        return task
+    
+    
+    @staticmethod
+    def hard_delete_task(
         session: Session,
         task: Task,
     ) -> None:
         session.delete(task)
         session.flush()
+        
+    
+    @staticmethod
+    def restore_task(
+        session: Session,
+        task: Task,
+    ) -> Task:
+        task.is_deleted = False
+        task.deleted_at = None
+
+        session.flush()
+
+        return task
         
         
     @staticmethod
@@ -234,7 +281,10 @@ class TaskRepository:
         statement = (
             select(TaskAssignee)
             .join(TaskAssignee.task)
-            .where(TaskAssignee.user_id == user_id)
+            .where(
+                TaskAssignee.user_id == user_id,
+                Task.is_deleted.is_(False),
+            )
             .options(
                 joinedload(TaskAssignee.task)
                 .joinedload(Task.owner),
@@ -302,3 +352,105 @@ class TaskRepository:
         )
 
         return task_assignees, total
+    
+    
+    @staticmethod
+    def get_deleted_tasks(
+        session: Session,
+        owner_id: UUID | None = None,
+        page: int = 1,
+        limit: int = 10,
+    ) -> tuple[list[Task], int]:
+
+        statement = (
+            select(Task)
+            .where(Task.is_deleted.is_(True))
+            .options(
+                joinedload(Task.owner),
+            )
+            .order_by(
+                Task.deleted_at.desc(),
+                Task.id.desc(),
+            )
+        )
+
+        if owner_id is not None:
+            statement = statement.where(
+                Task.owner_id == owner_id
+            )
+
+        total = session.execute(
+            select(func.count()).select_from(
+                statement.subquery()
+            )
+        ).scalar_one()
+
+        offset = (page - 1) * limit
+
+        statement = statement.offset(offset).limit(limit)
+
+        tasks = session.execute(
+            statement
+        ).scalars().all()
+
+        return tasks, total
+    
+    
+    @staticmethod
+    def create_activity(
+        session: Session,
+        task_id: UUID,
+        user_id: UUID,
+        action: TaskActivityType,
+        field: str | None = None,
+        old_value: str | None = None,
+        new_value: str | None = None,
+    ) -> TaskActivity:
+        activity = TaskActivity(
+            task_id=task_id,
+            user_id=user_id,
+            action=action,
+            field=field,
+            old_value=old_value,
+            new_value=new_value,
+        )
+        
+        session.add(activity)
+        session.flush()
+        return activity
+    
+    
+    @staticmethod
+    def get_task_activities(
+        session: Session,
+        task_id: UUID,
+        page: int = 1,
+        limit: int = 10
+    ) -> tuple[list[TaskActivity], int]:
+        statement = (
+            select(TaskActivity)
+            .where(TaskActivity.task_id == task_id)
+            .options(
+                joinedload(TaskActivity.user)
+            )
+            .order_by(
+                TaskActivity.created_at.desc(),
+                TaskActivity.id.desc(),
+            ) 
+        )
+        
+        total = session.execute(
+            select(func.count()).select_from(
+                statement.subquery()
+            )
+        ).scalar_one()
+
+        offset = (page - 1) * limit
+
+        statement = statement.offset(offset).limit(limit)     
+        
+        task_activities = session.execute(statement).scalars().all()
+        
+        return task_activities, total
+        
+        
