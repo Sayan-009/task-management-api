@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from task_management_api.tasks.activity_model import TaskActivity
+    from task_management_api.comments.model import TaskComment
 
 
 class Task(Base):
@@ -92,4 +93,9 @@ class Task(Base):
     activities: Mapped[list["TaskActivity"]] = relationship(
         back_populates="task",
         cascade="all, delete-orphan",
+    )
+    
+    comments: Mapped[list["TaskComment"]] = relationship(
+        back_populates="task",
+        cascade="all, delete-orphan"
     )

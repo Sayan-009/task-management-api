@@ -35,3 +35,10 @@ class TaskAlreadyDeletedError(Exception):
 
 class TaskNotDeletedError(Exception):
     pass
+
+
+class CommentNotFoundError(Exception):
+    pass
+
+class UpdateSameContentError(Exception):
+    pass
