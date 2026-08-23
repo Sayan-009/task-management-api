@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from task_management_api.tasks.model import Task
     from task_management_api.tasks.assignee_model import TaskAssignee
     from task_management_api.tasks.activity_model import TaskActivity
+    from task_management_api.comments.model import TaskComment
 
 
 
@@ -76,4 +77,8 @@ class User(Base):
     
     activities: Mapped[list["TaskActivity"]] = relationship(
         back_populates="user"
+    )
+    
+    comments: Mapped[list["TaskComment"]] = relationship(
+        back_populates="author"
     )
