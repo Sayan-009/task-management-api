@@ -42,3 +42,16 @@ class CommentNotFoundError(Exception):
 
 class UpdateSameContentError(Exception):
     pass
+
+
+class ConversationNotFoundError(Exception):
+    pass
+
+class MessageAlreadyDeletedError(Exception):
+    pass
+
+class MessageNotFoundError(Exception):
+    pass
+
+class MessageEditLimitExceededError(Exception):
+    pass

@@ -3,3 +3,5 @@ from task_management_api.tasks.model import Task
 from task_management_api.tasks.activity_model import TaskActivity
 from task_management_api.tasks.assignee_model import TaskAssignee
 from task_management_api.comments.model import TaskComment
+from task_management_api.conversations.conversation_model import PrivateConversation
+from task_management_api.conversations.message_model import PrivateMessage

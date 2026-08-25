@@ -6,6 +6,7 @@ from task_management_api.users.model import User
 from task_management_api.tasks.model import Task, TaskAssignee
 from task_management_api.tasks.repository import TaskRepository
 from task_management_api.users.repository import UserRepository
+from task_management_api.conversations.conversation_service import ConversationService
 from task_management_api.users.enums import UserRole
 from task_management_api.tasks.enums import (
     TaskPriority, 
@@ -138,6 +139,7 @@ class TaskService:
         owner = TaskOwnerResponse(
             id=task_details.owner.id,
             name=task_details.owner.name,
+            email=task_details.owner.email,
             status=task_details.status,
         )
 
@@ -145,6 +147,7 @@ class TaskService:
             TaskParticipantResponse(
                 user_id=assignment.user.id,
                 name=assignment.user.name,
+                email=assignment.user.email,
                 status=assignment.status,
             )
             for assignment in task_details.assignees
@@ -476,6 +479,13 @@ class TaskService:
         
         # Create activity for each newly assigned user
         for assignment in assignments:
+            
+            ConversationService.create_or_reactive(
+                session=session,
+                task_id=task_id,
+                assignee_id=assignment.user_id,
+            )
+            
             TaskRepository.create_activity(
                 session=session,
                 task_id=task_id,
@@ -531,6 +541,12 @@ class TaskService:
             session,
             task_assignee,
         )
+        
+        ConversationService.close_conversation(
+            session=session,
+            task_id=task_id,
+            assignee_id=current_user.id,
+        )
     
     
     
@@ -581,6 +597,12 @@ class TaskService:
         TaskRepository.delete_assignee(
             session, task_assignee
         )
+        
+        ConversationService.close_conversation(
+            session=session,
+            task_id=task_id,
+            assignee_id=assignee_id,
+        )       
         
         
         
@@ -665,6 +687,7 @@ class TaskService:
                 owner=TaskOwnerResponse(
                     id=assignment.task.owner.id,
                     name=assignment.task.owner.name,
+                    email=assignment.task.owner.email,
                     status=assignment.task.status,
                 ),
             )

@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from task_management_api.tasks.activity_model import TaskActivity
     from task_management_api.comments.model import TaskComment
+    from task_management_api.conversations.conversation_model import PrivateConversation
 
 
 class Task(Base):
@@ -96,6 +97,11 @@ class Task(Base):
     )
     
     comments: Mapped[list["TaskComment"]] = relationship(
+        back_populates="task",
+        cascade="all, delete-orphan"
+    )
+    
+    private_conversations: Mapped[list["PrivateConversation"]] = relationship(
         back_populates="task",
         cascade="all, delete-orphan"
     )
