@@ -4,10 +4,9 @@ from sqlalchemy.orm import Session, selectinload
 
 
 from task_management_api.conversations.conversation_model import PrivateConversation
+from task_management_api.tasks.model import Task
 from task_management_api.conversations.enums import ConversationStatus
-from task_management_api.conversations.conversation_schema import (
-    ConversationResponse
-)
+
 
 
 class ConversationRepository:

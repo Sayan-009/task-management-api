@@ -271,3 +271,105 @@ class MessageService:
             total=total,
             total_pages=total_pages,
         )
+        
+        
+    @staticmethod
+    def get_deleted_task_messages(
+        session: Session,
+        current_user: User,
+        conversation_id: UUID,
+        page: int = 1,
+        limit: int = 10,
+    ) -> MessageListResponse:
+
+        # Get conversation
+        conversation = ConversationRepository.get_by_id(
+            session,
+            conversation_id
+        )
+
+        if conversation is None:
+            raise ConversationNotFoundError(
+                "Conversation not found"
+            )
+
+        # Get task, including soft-deleted tasks
+        task = TaskRepository.get_by_id(
+            session,
+            conversation.task_id
+        )
+
+        if task is None:
+            raise TaskNotFoundError(
+                "Task not found"
+            )
+
+        # This endpoint is only for deleted tasks
+        if not task.is_deleted:
+            raise TaskNotFoundError(
+                "Task is not deleted"
+            )
+
+        # Only task owner can see messages
+        if task.owner_id != current_user.id:
+            raise ForbiddenOperationError(
+                "You don't have permission to see these messages"
+            )
+
+        # Fetch messages using existing repository
+        messages, total = MessageRepository.get_messages(
+            session=session,
+            conversation_id=conversation_id,
+            page=page,
+            limit=limit
+        )
+
+        messages_list = []
+
+        for message in messages:
+
+            content = message.content
+
+            if message.is_deleted:
+                content = "[This message was deleted]"
+
+            messages_list.append(
+                MessageResponse(
+                    id=message.id,
+                    conversation_id=message.conversation_id,
+
+                    sender=SenderDetails(
+                        id=message.sender.id,
+                        name=message.sender.name,
+                        email=message.sender.email
+                    ),
+
+                    content=content,
+
+                    is_read=message.is_read,
+                    read_at=message.read_at,
+
+                    is_edited=message.is_edited,
+                    edited_at=message.edited_at,
+
+                    is_deleted=message.is_deleted,
+                    deleted_at=message.deleted_at,
+
+                    created_at=message.created_at,
+                    updated_at=message.updated_at
+                )
+            )
+
+        total_pages = (
+            math.ceil(total / limit)
+            if total > 0
+            else 0
+        )
+
+        return MessageListResponse(
+            items=messages_list,
+            page=page,
+            limit=limit,
+            total=total,
+            total_pages=total_pages
+        )

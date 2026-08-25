@@ -64,3 +64,48 @@ def get_conversations(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc)
         ) from exc
+        
+        
+@conv_router.get(
+    "/{task_id}/deleted/conversations",
+    response_model=ConversationListResponse,
+    status_code=status.HTTP_200_OK
+)
+def get_deleted_task_conversations(
+    task_id: UUID,
+    page: int = Query(
+        default=1,
+        ge=1
+    ),
+    limit: int = Query(
+        default=10,
+        ge=1,
+        le=100
+    ),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db),
+) -> ConversationListResponse:
+
+    try:
+
+        return ConversationService.get_deleted_task_conversations(
+            session=session,
+            current_user=current_user,
+            task_id=task_id,
+            page=page,
+            limit=limit
+        )
+
+    except TaskNotFoundError as exc:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        ) from exc
+
+    except ForbiddenOperationError as exc:
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc)
+        ) from exc

@@ -10,7 +10,6 @@ from task_management_api.conversations.enums import ConversationStatus
 from task_management_api.users.model import User
 from task_management_api.tasks.assignee_model import TaskAssignee
 from task_management_api.conversations.conversation_schema import (
-    ConversationResponse,
     ConversationListResponse
 )
 from task_management_api.core.exceptions import (
@@ -96,8 +95,7 @@ class ConversationService:
                 "Task not found"
             )
             
-        is_owner = (task.owner_id == current_user.id)
-        
+        is_owner = (task.owner_id == current_user.id)  
         is_assignee = TaskRepository.get_by_task_user(
             session,
             task_id,
@@ -133,3 +131,57 @@ class ConversationService:
             total_pages=total_pages
         )
         
+        
+        
+    @staticmethod
+    def get_deleted_task_conversations(
+        session: Session,
+        current_user: User,
+        task_id: UUID,
+        page: int = 1,
+        limit: int = 10
+    ) -> ConversationListResponse:
+
+        task = TaskRepository.get_by_id(
+            session,
+            task_id
+        )
+
+        if task is None:
+            raise TaskNotFoundError(
+                "Task not found"
+            )
+
+        if not task.is_deleted:
+            raise TaskNotFoundError(
+                "Task is not deleted"
+            )
+
+        # Only the task owner can access it
+        if task.owner_id != current_user.id:
+            raise ForbiddenOperationError(
+                "You don't have permission to see these conversations"
+            )
+
+        conversations, total = (
+            ConversationRepository.get_conversations_by_task(
+                session=session,
+                task_id=task_id,
+                page=page,
+                limit=limit
+            )
+        )
+
+        total_pages = (
+            math.ceil(total / limit)
+            if total > 0
+            else 0
+        )
+
+        return ConversationListResponse(
+            items=conversations,
+            page=page,
+            limit=limit,
+            total=total,
+            total_pages=total_pages
+        )

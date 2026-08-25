@@ -321,6 +321,7 @@ class TaskService:
             session,
             task,
         )
+    
 
         TaskRepository.create_activity(
             session=session,
@@ -383,9 +384,8 @@ class TaskService:
             )
 
         is_owner = task.owner_id == current_user.id
-        is_admin = current_user.role == UserRole.ADMIN
 
-        if not is_owner and not is_admin:
+        if not is_owner:
             raise ForbiddenOperationError(
                 "You don't have permission to restore this task"
             )
@@ -713,9 +713,7 @@ class TaskService:
         limit: int = 10,
     ) -> TaskListResponse:
 
-        is_admin = current_user.role == UserRole.ADMIN
-
-        owner_id = None if is_admin else current_user.id
+        owner_id = current_user.id
 
         tasks, total = TaskRepository.get_deleted_tasks(
             session,

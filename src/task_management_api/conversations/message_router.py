@@ -227,6 +227,12 @@ def get_messages(
         
         return messages
     
+    except TaskNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        ) from exc       
+    
     except ConversationNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -240,3 +246,59 @@ def get_messages(
         ) from exc
     
     
+    
+    
+@message_router.get(
+    "/{conversation_id}/deleted/messages",
+    response_model=MessageListResponse,
+    status_code=status.HTTP_200_OK
+)
+def get_deleted_task_messages(
+    conversation_id: UUID,
+
+    page: int = Query(
+        default=1,
+        ge=1
+    ),
+
+    limit: int = Query(
+        default=10,
+        ge=1,
+        le=100
+    ),
+
+    current_user: User = Depends(get_current_user),
+
+    session: Session = Depends(get_db),
+) -> MessageListResponse:
+
+    try:
+
+        return MessageService.get_deleted_task_messages(
+            session=session,
+            current_user=current_user,
+            conversation_id=conversation_id,
+            page=page,
+            limit=limit
+        )
+
+    except ConversationNotFoundError as exc:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        ) from exc
+
+    except TaskNotFoundError as exc:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        ) from exc
+
+    except ForbiddenOperationError as exc:
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc)
+        ) from exc

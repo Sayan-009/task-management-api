@@ -69,7 +69,10 @@ class TaskRepository:
         limit: int = 10,
     ) -> tuple[list[Task], int]:
         
-        statement = select(Task).where(Task.owner_id == owner_id)
+        statement = select(Task).where(
+            Task.owner_id == owner_id,
+            Task.is_deleted.is_(False)
+        )
 
         # Search
         if search is not None:
@@ -146,7 +149,7 @@ class TaskRepository:
 
         return session.execute(statement).scalar_one_or_none()
     
-    
+      
     @staticmethod
     def status_update(
         session: Session,
@@ -357,7 +360,7 @@ class TaskRepository:
     @staticmethod
     def get_deleted_tasks(
         session: Session,
-        owner_id: UUID | None = None,
+        owner_id: UUID,
         page: int = 1,
         limit: int = 10,
     ) -> tuple[list[Task], int]:
