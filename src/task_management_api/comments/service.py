@@ -153,7 +153,7 @@ class CommentService:
     ) -> CommentListResponse:
 
         
-        task = TaskRepository.get_active_by_id(
+        task = TaskRepository.get_by_id(
             session,
             task_id
         )
@@ -175,12 +175,16 @@ class CommentService:
             is not None
         )
 
+        if task.is_deleted and is_task_assignee:
+            raise TaskNotFoundError(
+                "Task not found"
+            )
+            
         if not is_owner and not is_task_assignee:
             raise ForbiddenOperationError(
                 "You are not allowed to see comments of this task"
             )
-
-    
+            
         comments, total = CommentRepository.comments_by_task_id(
             session=session,
             task_id=task_id,

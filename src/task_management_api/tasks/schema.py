@@ -32,12 +32,14 @@ class TaskResponse(BaseModel):
 class TaskOwnerResponse(BaseModel):
     id: UUID
     name: str
+    email: EmailStr
     status: TaskStatus
 
 
 class TaskParticipantResponse(BaseModel):
     user_id: UUID
     name: str
+    email: EmailStr
     status: TaskStatus
 
 

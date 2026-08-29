@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from task_management_api.tasks.assignee_model import TaskAssignee
     from task_management_api.tasks.activity_model import TaskActivity
     from task_management_api.comments.model import TaskComment
+    from task_management_api.conversations.conversation_model import PrivateConversation
+    from task_management_api.conversations.message_model import PrivateMessage
 
 
 
@@ -81,4 +83,12 @@ class User(Base):
     
     comments: Mapped[list["TaskComment"]] = relationship(
         back_populates="author"
+    )
+    
+    assigned_private_conversations: Mapped[list["PrivateConversation"]] = relationship(
+        back_populates="assignee",
+    )
+    
+    sent_private_messages: Mapped[list["PrivateMessage"]] = relationship(
+        back_populates="sender"
     )
