@@ -14,7 +14,8 @@ from task_management_api.conversations.conversation_schema import (
 )
 from task_management_api.core.exceptions import (
     TaskNotFoundError,
-    ForbiddenOperationError
+    ForbiddenOperationError,
+    ConversationNotFoundError
 )
 
 
@@ -185,3 +186,50 @@ class ConversationService:
             total=total,
             total_pages=total_pages
         )
+        
+        
+    @staticmethod
+    def validate_conversation_access(
+        session: Session,
+        current_user: User,
+        conversation_id: UUID,
+    ) -> PrivateConversation:
+        
+        print("Checking conversation access")
+
+        conversation = ConversationRepository.get_active_by_id(
+            session,
+            conversation_id,
+        )
+        
+        print("Conversation:", conversation)
+
+        if conversation is None:
+            raise ConversationNotFoundError(
+                "Active conversation not found"
+            )
+
+        task = TaskRepository.get_active_by_id(
+            session,
+            conversation.task_id,
+        )
+
+        if task is None:
+            raise TaskNotFoundError(
+                "Task not found"
+            )
+
+        is_owner = task.owner_id == current_user.id
+        is_assignee = conversation.assignee_id == current_user.id
+        
+        print("Task:", task)
+        print("Task owner:", task.owner_id if task else None)
+        print("Conversation assignee:", conversation.assignee_id)
+        print("Current user:", current_user.id)
+
+        if not is_owner and not is_assignee:
+            raise ForbiddenOperationError(
+                "You don't have permission to access this conversation"
+            )
+
+        return conversation

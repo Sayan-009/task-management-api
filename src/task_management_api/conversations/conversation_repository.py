@@ -59,7 +59,8 @@ class ConversationRepository:
     ) -> tuple[list[PrivateConversation], int]:
 
         conditions = [
-            PrivateConversation.task_id == task_id
+            PrivateConversation.task_id == task_id,
+            PrivateConversation.status == ConversationStatus.ACTIVE
         ]
 
         if assignee_id is not None:

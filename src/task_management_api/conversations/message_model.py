@@ -54,6 +54,15 @@ class PrivateMessage(Base):
         String(5000),
         nullable=False
     )
+    
+    reply_to_message_id: Mapped[UUID | None] = mapped_column(
+        SQLUUID(as_uuid=True),
+        ForeignKey(
+            "messages.id",
+            ondelete="SET NULL"
+        ),
+        nullable=True,
+    )    
 
     is_read: Mapped[bool] = mapped_column(
         Boolean,
@@ -107,4 +116,17 @@ class PrivateMessage(Base):
 
     conversation: Mapped["PrivateConversation"] = relationship(
         back_populates="messages"
+    )
+    
+    reply_to: Mapped["PrivateMessage | None"] = relationship(
+        "PrivateMessage",
+        remote_side="PrivateMessage.id",
+        foreign_keys=[reply_to_message_id],
+        back_populates="replies",
+    )
+
+    replies: Mapped[list["PrivateMessage"]] = relationship(
+        "PrivateMessage",
+        foreign_keys=[reply_to_message_id],
+        back_populates="reply_to",
     )
