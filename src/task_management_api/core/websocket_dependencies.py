@@ -13,13 +13,10 @@ def get_websocket_user(
     websocket: WebSocket,
     session: Session = Depends(get_db),
 ) -> User | None:
-    
-    print("WebSocket authentication started")
 
     token = websocket.query_params.get("token")
 
     if not token:
-        print("No token provided")
         raise WebSocketException(
             code=status.WS_1008_POLICY_VIOLATION,
             reason="Authentication token is required"
@@ -48,8 +45,6 @@ def get_websocket_user(
         session,
         user_id
     )
-    
-    print("Authenticated user:", user.id if user else None)
 
     if user is None:
         raise WebSocketException(

@@ -222,11 +222,6 @@ class ConversationService:
         is_owner = task.owner_id == current_user.id
         is_assignee = conversation.assignee_id == current_user.id
         
-        print("Task:", task)
-        print("Task owner:", task.owner_id if task else None)
-        print("Conversation assignee:", conversation.assignee_id)
-        print("Current user:", current_user.id)
-
         if not is_owner and not is_assignee:
             raise ForbiddenOperationError(
                 "You don't have permission to access this conversation"

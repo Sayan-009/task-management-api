@@ -11,6 +11,10 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 
+from task_management_api.conversations.websocket.dispatcher import (
+    EventDispatcher
+)
+
 from task_management_api.conversations.websocket.manager import (
     connection_manager
 )
@@ -23,7 +27,6 @@ from task_management_api.core.exceptions import (
 )
 
 from task_management_api.conversations.conversation_service import ConversationService
-from task_management_api.conversations.message_service import MessageService
 from task_management_api.conversations.websocket.events import WebSocketEvent
 
 from task_management_api.core.websocket_dependencies import get_websocket_user
@@ -69,56 +72,38 @@ async def conversation_websocket(
     
     await connection_manager.connect(
         room_id,
-        websocket
+        current_user.id,
+        websocket,
     )
     
     try:
         while True:
             payload = await websocket.receive_json()
 
-            event = payload.get("event")
+            event_name = payload.get("event")
             data = payload.get("data", {})
 
-            if event == WebSocketEvent.MARK_MESSAGES_READ:
+            try:
+                event = WebSocketEvent(event_name)
 
-                message_ids = data.get("message_ids", [])
+            except ValueError:
+                await websocket.send_json({
+                    "event": "error",
+                    "data": {
+                        "message": f"Unsupported event: {event_name}",
+                    },
+                })
+                continue
 
-                message_ids = [
-                    UUID(message_id)
-                    for message_id in message_ids
-                ]
-
-                messages = MessageService.mark_messages_as_read(
-                    session=session,
-                    current_user=current_user,
-                    conversation_id=conversation_id,
-                    message_ids=message_ids,
-                )
-
-                session.commit()
-
-                if messages:
-
-                    await connection_manager.broadcast(
-                        room_id=room_id,
-                        event=WebSocketEvent.MESSAGES_READ,
-                        data={
-                            "conversation_id": str(conversation_id),
-                            "message_ids": [
-                                str(message.id)
-                                for message in messages
-                            ],
-                            "read_at": (
-                                messages[0].read_at.isoformat()
-                            ),
-                            "read_by": {
-                                "id": str(current_user.id),
-                                "name": current_user.name,
-                            },
-                        },
-                    )      
+            await EventDispatcher.dispatch(
+                event=event,
+                data=data,
+                conversation_id=conversation_id,
+                current_user=current_user,
+                session=session,
+            )      
+                    
     except WebSocketDisconnect:
-        
         print(f"WebSocket disconnected: {room_id}")
         
         connection_manager.disconnect(
