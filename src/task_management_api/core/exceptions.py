@@ -55,3 +55,9 @@ class MessageNotFoundError(Exception):
 
 class MessageEditLimitExceededError(Exception):
     pass
+
+class AttachmentNotFoundError(Exception):
+    pass
+
+class AttachmentAlreadyAttachedError(Exception):
+    pass

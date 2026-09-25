@@ -7,6 +7,7 @@ from task_management_api.users.model import User
 from task_management_api.tasks.repository import TaskRepository
 from task_management_api.conversations.enums import ConversationStatus
 from task_management_api.conversations.message_repository import MessageRepository
+from task_management_api.conversations.attachment_repository import AttachmentRepository
 from task_management_api.conversations.conversation_repository import (
     ConversationRepository
 )
@@ -25,6 +26,12 @@ from task_management_api.core.exceptions import (
     MessageAlreadyDeletedError,
     MessageNotFoundError,
     MessageEditLimitExceededError,
+    AttachmentNotFoundError,
+    AttachmentAlreadyAttachedError,
+)
+
+from task_management_api.conversations.attachment_schema import (
+    AttachmentResponse
 )
 
 EDIT_TIME_LIMIT = timedelta(minutes=15)
@@ -73,6 +80,17 @@ class MessageService:
 
             content=content,
             reply_to=reply_to,
+            
+            attachments=[
+                AttachmentResponse(
+                    id=attachment.id,
+                    file_name=attachment.file_name,
+                    mime_type=attachment.mime_type,
+                    file_size=attachment.file_size,
+                    created_at=attachment.created_at,
+                )
+                for attachment in message.attachments
+            ],
 
             is_read=message.is_read,
             read_at=message.read_at,
@@ -137,6 +155,31 @@ class MessageService:
                 raise MessageNotFoundError(
                     "The message you are trying to reply to was not found"
                 )
+                
+        attachments = []
+                
+        if message.attachment_ids:
+            attachments = AttachmentRepository.get_by_ids(
+                session,
+                message.attachment_ids,
+            )
+
+            if len(attachments) != len(message.attachment_ids):
+                raise AttachmentNotFoundError(
+                    "One or more attachments were not found"
+                )
+                
+            for attachment in attachments:
+                if attachment.uploaded_by != current_user.id:
+                    raise ForbiddenOperationError(
+                        "You don't have permission to use one or more attachments"
+                    )
+                    
+            for attachment in attachments:
+                if attachment.message_id is not None:
+                    raise AttachmentAlreadyAttachedError(
+                        "One or more attachments are already attached to a message"
+                    )
             
         created_message = MessageRepository.create(
             session,
@@ -144,6 +187,11 @@ class MessageService:
             current_user,
             message,
         )
+        
+        created_message.attachments.extend(attachments)
+        
+        # for attachment in attachments:
+        #     attachment.message_id = created_message.id
 
         return MessageService._build_message_response(
             created_message
@@ -376,41 +424,10 @@ class MessageService:
             limit=limit
         )
 
-        messages_list = []
-
-        for message in messages:
-
-            content = message.content
-
-            if message.is_deleted:
-                content = "[This message was deleted]"
-
-            messages_list.append(
-                MessageResponse(
-                    id=message.id,
-                    conversation_id=message.conversation_id,
-
-                    sender=SenderDetails(
-                        id=message.sender.id,
-                        name=message.sender.name,
-                        email=message.sender.email
-                    ),
-
-                    content=content,
-
-                    is_read=message.is_read,
-                    read_at=message.read_at,
-
-                    is_edited=message.is_edited,
-                    edited_at=message.edited_at,
-
-                    is_deleted=message.is_deleted,
-                    deleted_at=message.deleted_at,
-
-                    created_at=message.created_at,
-                    updated_at=message.updated_at
-                )
-            )
+        messages_list = [
+            MessageService._build_message_response(message)
+            for message in messages
+        ]
 
         total_pages = (
             math.ceil(total / limit)

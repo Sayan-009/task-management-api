@@ -5,3 +5,4 @@ from task_management_api.tasks.assignee_model import TaskAssignee
 from task_management_api.comments.model import TaskComment
 from task_management_api.conversations.conversation_model import PrivateConversation
 from task_management_api.conversations.message_model import PrivateMessage
+from task_management_api.conversations.attachment_model import MessageAttachment

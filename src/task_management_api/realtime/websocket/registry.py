@@ -1,6 +1,6 @@
 from typing import Callable
 
-from task_management_api.conversations.websocket.events import (
+from task_management_api.realtime.websocket.events import (
     WebSocketEvent
 )
 

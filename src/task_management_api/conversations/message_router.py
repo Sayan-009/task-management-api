@@ -5,12 +5,12 @@ from sqlalchemy.orm import (
     Session
 )
 
-
 from task_management_api.core.dependencies import get_current_user
 from task_management_api.db.session import get_db
 
 from task_management_api.users.model import User
 from task_management_api.conversations.message_service import MessageService
+from task_management_api.conversations.conversation_service import ConversationService
 from task_management_api.conversations.message_schema import (
     MessageResponse,
     CreateMessageRequest,
@@ -26,10 +26,10 @@ from task_management_api.core.exceptions import (
     MessageEditLimitExceededError
 )
 
-from task_management_api.conversations.websocket.manager import (
+from task_management_api.realtime.websocket.manager import (
     connection_manager
 )
-from task_management_api.conversations.websocket.events import (
+from task_management_api.realtime.websocket.events import (
     WebSocketEvent
 )
 
@@ -60,11 +60,16 @@ async def create_message(
         )
 
         session.commit()
+        
+        
+        other_participant_id = ConversationService.get_other_participant_id(
+            session=session,
+            current_user=current_user,
+            conversation_id=conversation_id,
+        )
 
-        room_id = f"conversation:{conversation_id}"
-
-        await connection_manager.broadcast(
-            room_id=room_id,
+        await connection_manager.send_to_user(
+            user_id=other_participant_id,
             event=WebSocketEvent.MESSAGE_CREATED,
             data={
                 "id": str(created_message.id),
@@ -92,6 +97,17 @@ async def create_message(
                     if created_message.reply_to is not None
                     else None
                 ),
+                
+                "attachments": [
+                    {
+                        "id": str(attachment.id),
+                        "file_name": attachment.file_name,
+                        "mime_type": attachment.mime_type,
+                        "file_size": attachment.file_size,
+                        "created_at": attachment.created_at.isoformat(),
+                    }
+                    for attachment in created_message.attachments
+                ],
 
                 "is_read": created_message.is_read,
                 "is_edited": created_message.is_edited,
@@ -150,10 +166,15 @@ async def update_message(
         
         session.commit()
         
-        room_id = f"conversation:{conversation_id}"
-
-        await connection_manager.broadcast(
-            room_id=room_id,
+        
+        other_participant_id = ConversationService.get_other_participant_id(
+            session=session,
+            current_user=current_user,
+            conversation_id=conversation_id,
+        ) 
+        
+        await connection_manager.send_to_user(
+            user_id=other_participant_id,
             event=WebSocketEvent.MESSAGE_UPDATED,
             data={
                 "id": str(updated_message.id),
@@ -170,7 +191,7 @@ async def update_message(
                 "created_at": updated_message.created_at.isoformat(),
                 "updated_at": updated_message.updated_at.isoformat(),
             },
-        )    
+        )         
         
         return updated_message
     
@@ -238,10 +259,14 @@ async def delete_message(
         )
         session.commit()
         
-        room_id = f"conversation:{conversation_id}"
+        other_participant_id = ConversationService.get_other_participant_id(
+            session=session,
+            current_user=current_user,
+            conversation_id=conversation_id,
+        )
 
-        await connection_manager.broadcast(
-            room_id=room_id,
+        await connection_manager.send_to_user(
+            user_id=other_participant_id,
             event=WebSocketEvent.MESSAGE_DELETED,
             data={
                 "id": str(deleted_message.id),

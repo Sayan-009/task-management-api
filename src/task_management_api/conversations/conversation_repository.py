@@ -1,6 +1,6 @@
 from uuid import UUID
-from sqlalchemy import select, func
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import select, func, or_
+from sqlalchemy.orm import Session, selectinload, join, joinedload
 
 
 from task_management_api.conversations.conversation_model import PrivateConversation
@@ -47,6 +47,30 @@ class ConversationRepository:
         )
         
         return session.execute(statement).scalar_one_or_none()
+    
+    
+    @staticmethod
+    def get_active_by_participant(
+        session: Session,
+        user_id: UUID,
+    ) -> list[PrivateConversation]:
+        statement = (
+            select(PrivateConversation)
+            .join(PrivateConversation.task)
+            .where(
+                PrivateConversation.status == ConversationStatus.ACTIVE,
+                or_(
+                    PrivateConversation.assignee_id == user_id,
+                    Task.owner_id == user_id,
+                ),
+            )
+            .options(
+                joinedload(PrivateConversation.task)
+                .joinedload(Task.owner)
+            )
+        )
+
+        return session.execute(statement).scalars().all()
     
     
     @staticmethod

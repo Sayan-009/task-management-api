@@ -13,3 +13,7 @@ class WebSocketEvent(str, Enum):
     TYPING_STOP="typing_stop"
     USER_TYPING_STARTED="user_typing_started"
     USER_TYPING_STOPPED="user_typing_stopped"
+    
+    USER_ONLINE="user_online"
+    USER_OFFLINE="user_offline"
+    PRESENCE_SNAPSHOT="presence_snapshot"

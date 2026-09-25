@@ -14,7 +14,6 @@ from task_management_api.conversations.message_model import PrivateMessage
 from task_management_api.conversations.message_schema import (
    CreateMessageRequest,
    UpdateMessageRequest,
-   MessageResponse,
 )
 
 
@@ -58,6 +57,9 @@ class MessageRepository:
 
       statement = (
          select(PrivateMessage)
+         .options(
+            selectinload(PrivateMessage.attachments),
+         )
          .where(
                PrivateMessage.id == message_id,
                PrivateMessage.conversation_id == conversation_id,
@@ -91,8 +93,9 @@ class MessageRepository:
          )
          .options(
                selectinload(PrivateMessage.sender),
+               selectinload(PrivateMessage.attachments),
                selectinload(PrivateMessage.reply_to)
-               .selectinload(PrivateMessage.sender)
+               .selectinload(PrivateMessage.sender),
          )
          .order_by(
                PrivateMessage.created_at.asc()

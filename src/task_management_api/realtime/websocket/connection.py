@@ -6,5 +6,4 @@ from fastapi import WebSocket
 
 @dataclass
 class Connection:
-    user_id: UUID
     websocket: WebSocket

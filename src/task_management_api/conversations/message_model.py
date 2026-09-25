@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from task_management_api.users.model import User
     from task_management_api.conversations.conversation_model import PrivateConversation
-
+    from task_management_api.conversations.attachment_model import MessageAttachment
 
 
 class PrivateMessage(Base):
@@ -50,9 +50,9 @@ class PrivateMessage(Base):
         nullable=False
     )
 
-    content: Mapped[str] = mapped_column(
+    content: Mapped[str | None] = mapped_column(
         String(5000),
-        nullable=False
+        nullable=True,
     )
     
     reply_to_message_id: Mapped[UUID | None] = mapped_column(
@@ -129,4 +129,10 @@ class PrivateMessage(Base):
         "PrivateMessage",
         foreign_keys=[reply_to_message_id],
         back_populates="reply_to",
+    )
+    
+    attachments: Mapped[list["MessageAttachment"]] = relationship(
+        "MessageAttachment",
+        back_populates="message",
+        cascade="all, delete-orphan",
     )
