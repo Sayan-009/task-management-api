@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import UploadFile
 from uuid import uuid4
 from pathlib import Path
@@ -5,6 +6,12 @@ from sqlalchemy.orm import Session
 
 from task_management_api.conversations.storage.file_storage import FileStorage
 from task_management_api.conversations.attachment_repository import AttachmentRepository
+
+from task_management_api.core.exceptions import (
+    AttachmentNotFoundError,
+    AttachmentNotAttachedError,
+    ForbiddenOperationError
+)
 
 from task_management_api.conversations.attachment_model import MessageAttachment
 from task_management_api.users.model import User
@@ -119,3 +126,41 @@ class AttachmentService:
                 await self.storage.delete(attachment.file_path)
 
             raise
+        
+        
+    def get_attachment_for_user(
+        self,
+        session: Session,
+        current_user: User,
+        attachment_id: UUID
+    ) -> MessageAttachment :
+        attachment = AttachmentRepository.get_with_message(
+            session,
+            attachment_id,
+        )
+        
+        if attachment is None:
+            raise AttachmentNotFoundError(
+                "Attachment not found"
+            )
+            
+        if attachment.message_id is None:
+            raise AttachmentNotAttachedError(
+                "Attachment is not attached with corresponding message"
+            )
+            
+        is_owner = attachment.message.conversation.task.owner_id == current_user.id
+        is_assignee = attachment.message.conversation.assignee_id == current_user.id
+        
+        if not is_owner and not is_assignee:
+            raise ForbiddenOperationError(
+                "You are not allowed to download or view this resource"
+            )
+            
+            
+        return attachment
+    
+    
+    
+        
+        

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+from pathlib import Path
 
 class FileStorage(ABC):
     
@@ -19,4 +19,11 @@ class FileStorage(ABC):
         self,
         file_path: str,
     ) -> None:
+        pass
+    
+    @abstractmethod
+    def get_path(
+        self,
+        file_path: str
+    ) -> Path:
         pass

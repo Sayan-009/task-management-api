@@ -54,3 +54,14 @@ class LocalFileStorage(FileStorage):
     ) -> None:
         path = self.base_dir / file_path
         path.unlink(missing_ok=True)
+        
+        
+    def get_path(self, file_path: str) -> Path:
+        base_path = self.base_dir.resolve()
+        
+        requested_path = (self.base_dir / file_path).resolve()
+        
+        if not requested_path.is_relative_to(base_path):
+            raise ValueError("Invalid file path")
+
+        return requested_path

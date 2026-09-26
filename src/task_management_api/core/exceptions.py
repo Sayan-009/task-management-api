@@ -1,7 +1,6 @@
 class UserNotFoundError(Exception):
     pass
 
-
 class TaskNotFoundError(Exception):
     pass
 
@@ -17,9 +16,6 @@ class AlreadyAssignedError(Exception):
 
 
 class DuplicateAssigneeError(Exception):
-    pass
-
-class UserNotFoundError(Exception):
     pass
 
 class UserInactiveError(Exception):
@@ -58,6 +54,7 @@ class MessageEditLimitExceededError(Exception):
 
 class AttachmentNotFoundError(Exception):
     pass
-
+class AttachmentNotAttachedError(Exception):
+    pass
 class AttachmentAlreadyAttachedError(Exception):
     pass
