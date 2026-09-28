@@ -16,6 +16,8 @@ from task_management_api.core.exceptions import (
 from task_management_api.conversations.attachment_model import MessageAttachment
 from task_management_api.users.model import User
 
+from task_management_api.conversations.storage import cloudinary_config
+
 
 ALLOWED_IMAGE_TYPES = {
     "image/jpeg",

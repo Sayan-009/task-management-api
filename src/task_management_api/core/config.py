@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     
     upload_dir: str = "uploads"
     
+    cloudinary_cloud_name: str
+    cloudinary_api_key: str
+    cloudinary_api_secret: str
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"

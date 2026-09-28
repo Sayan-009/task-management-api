@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status, Depends, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 
 from sqlalchemy.orm import Session
 
@@ -71,27 +72,13 @@ async def get_attachment(
             attachment_id,
         )
 
-        file_path = attachment_service.storage.get_path(
-            attachment.file_path
+        url = attachment_service.storage.get_url(
+            attachment.file_path,
         )
 
-        if not file_path.is_file():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="File not found",
-            )
-
-        disposition = (
-            "inline"
-            if attachment.mime_type.startswith("image/")
-            else "attachment"
-        )
-
-        return FileResponse(
-            path=file_path,
-            media_type=attachment.mime_type,
-            filename=attachment.file_name,
-            content_disposition_type=disposition,
+        return RedirectResponse(
+            url=url,
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
         )
 
     except AttachmentNotFoundError as exc:
@@ -109,11 +96,5 @@ async def get_attachment(
     except ForbiddenOperationError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        )
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         )

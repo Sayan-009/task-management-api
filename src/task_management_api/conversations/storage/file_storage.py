@@ -14,16 +14,16 @@ class FileStorage(ABC):
         pass
     
     
-    @abstractmethod
-    async def delete(
-        self,
-        file_path: str,
-    ) -> None:
-        pass
+    # @abstractmethod
+    # async def delete(
+    #     self,
+    #     file_path: str,
+    # ) -> None:
+    #     pass
     
-    @abstractmethod
-    def get_path(
-        self,
-        file_path: str
-    ) -> Path:
-        pass
+    # @abstractmethod
+    # def get_path(
+    #     self,
+    #     file_path: str
+    # ) -> Path:
+    #     pass
