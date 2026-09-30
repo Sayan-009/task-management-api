@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from task_management_api.comments.model import TaskComment
     from task_management_api.conversations.conversation_model import PrivateConversation
     from task_management_api.conversations.message_model import PrivateMessage
-
+    from task_management_api.conversations.attachment_model import MessageAttachment
 
 
 class User(Base):
@@ -56,6 +56,11 @@ class User(Base):
         nullable=False,
     )
     
+    last_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -92,3 +97,10 @@ class User(Base):
     sent_private_messages: Mapped[list["PrivateMessage"]] = relationship(
         back_populates="sender"
     )
+    
+    attachments: Mapped[list["MessageAttachment"]] = relationship(
+        "MessageAttachment",
+        back_populates="uploaded_by_user",
+    )
+    
+    

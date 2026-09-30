@@ -584,6 +584,10 @@ class TaskService:
                 f"User {assignee_id} is not assigned to task {task_id}"
             )
             
+        TaskRepository.delete_assignee(
+            session, task_assignee
+        )
+        
         TaskRepository.create_activity(
             session=session,
             task_id=task_id,
@@ -594,9 +598,6 @@ class TaskService:
             new_value=None,
         )
         
-        TaskRepository.delete_assignee(
-            session, task_assignee
-        )
         
         ConversationService.close_conversation(
             session=session,

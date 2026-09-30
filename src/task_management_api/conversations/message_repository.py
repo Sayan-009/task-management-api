@@ -12,8 +12,8 @@ from sqlalchemy.orm import (
 from task_management_api.users.model import User
 from task_management_api.conversations.message_model import PrivateMessage
 from task_management_api.conversations.message_schema import (
-   MessageBody,
-   MessageResponse,
+   CreateMessageRequest,
+   UpdateMessageRequest,
 )
 
 
@@ -25,18 +25,19 @@ class MessageRepository:
       session: Session,
       conversation_id: UUID,
       sender: User,
-      message: MessageBody,
+      message: CreateMessageRequest,
    ) -> PrivateMessage:
-      message = PrivateMessage(
+      new_message = PrivateMessage(
          conversation_id=conversation_id,
          sender=sender,
          content=message.content,
+         reply_to_message_id=message.reply_to_message_id,
       )
       
-      session.add(message)
+      session.add(new_message)
       session.flush()
       
-      return message
+      return new_message
    
    @staticmethod
    def get_by_id(
@@ -56,6 +57,9 @@ class MessageRepository:
 
       statement = (
          select(PrivateMessage)
+         .options(
+            selectinload(PrivateMessage.attachments),
+         )
          .where(
                PrivateMessage.id == message_id,
                PrivateMessage.conversation_id == conversation_id,
@@ -88,7 +92,10 @@ class MessageRepository:
                PrivateMessage.conversation_id == conversation_id
          )
          .options(
-               selectinload(PrivateMessage.sender)
+               selectinload(PrivateMessage.sender),
+               selectinload(PrivateMessage.attachments),
+               selectinload(PrivateMessage.reply_to)
+               .selectinload(PrivateMessage.sender),
          )
          .order_by(
                PrivateMessage.created_at.asc()
@@ -108,7 +115,7 @@ class MessageRepository:
    def update(
       session: Session,
       message: PrivateMessage,
-      updated_message: MessageBody
+      updated_message: UpdateMessageRequest,
    ) -> PrivateMessage:
       message.content = updated_message.content
       message.is_edited = True
@@ -129,3 +136,38 @@ class MessageRepository:
       
       session.flush()
       
+      
+   @staticmethod
+   def mark_messages_as_read(
+      session: Session,
+      conversation_id: UUID,
+      current_user_id: UUID,
+      message_ids: list[UUID],
+   ) -> list[PrivateMessage]:
+
+      statement = (
+         select(PrivateMessage)
+         .where(
+               PrivateMessage.conversation_id == conversation_id,
+               PrivateMessage.id.in_(message_ids),
+               PrivateMessage.sender_id != current_user_id,
+               PrivateMessage.is_read.is_(False),
+               PrivateMessage.is_deleted.is_(False),
+         )
+      )
+
+      messages = (
+         session.execute(statement)
+         .scalars()
+         .all()
+      )
+
+      read_at = datetime.now(timezone.utc)
+
+      for message in messages:
+         message.is_read = True
+         message.read_at = read_at
+
+      session.flush()
+
+      return messages   

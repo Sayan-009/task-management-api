@@ -8,6 +8,8 @@ from task_management_api.tasks.router import router as tasks_router
 from task_management_api.comments.router import task_router, comment_router
 from task_management_api.conversations.conversation_router import conv_router
 from task_management_api.conversations.message_router import message_router
+from task_management_api.conversations.attachment_router import attachment_router
+from task_management_api.realtime.websocket.router import websocket_router
 
 app = FastAPI()
 
@@ -30,6 +32,11 @@ app.include_router(task_router)
 app.include_router(comment_router) 
 app.include_router(conv_router)
 app.include_router(message_router)
+app.include_router(attachment_router)
+
+
+# websocket routers
+app.include_router(websocket_router)
 
 
 

@@ -14,7 +14,8 @@ from task_management_api.conversations.conversation_schema import (
 )
 from task_management_api.core.exceptions import (
     TaskNotFoundError,
-    ForbiddenOperationError
+    ForbiddenOperationError,
+    ConversationNotFoundError
 )
 
 
@@ -74,6 +75,29 @@ class ConversationService:
             )
             
         return conversation
+    
+    
+    @staticmethod
+    def get_related_user_ids(
+        session: Session,
+        user_id: UUID
+    ) -> set[UUID]:
+        related_user_ids: set[UUID] = set()
+        
+        related_conversations = ConversationRepository.get_active_by_participant(
+            session,
+            user_id,
+        )
+        
+        for conversation in related_conversations:
+            owner_id = conversation.task.owner_id
+            assignee_id = conversation.assignee_id
+            if owner_id == user_id:
+                related_user_ids.add(assignee_id)
+            else:
+                related_user_ids.add(owner_id)
+                
+        return related_user_ids
     
     
     @staticmethod
@@ -185,3 +209,80 @@ class ConversationService:
             total=total,
             total_pages=total_pages
         )
+        
+        
+    @staticmethod
+    def validate_conversation_access(
+        session: Session,
+        current_user: User,
+        conversation_id: UUID,
+    ) -> PrivateConversation:
+
+        conversation = ConversationRepository.get_active_by_id(
+            session,
+            conversation_id,
+        )
+
+        if conversation is None:
+            raise ConversationNotFoundError(
+                "Active conversation not found"
+            )
+
+        task = TaskRepository.get_active_by_id(
+            session,
+            conversation.task_id,
+        )
+
+        if task is None:
+            raise TaskNotFoundError(
+                "Task not found"
+            )
+
+        is_owner = task.owner_id == current_user.id
+        is_assignee = conversation.assignee_id == current_user.id
+        
+        if not is_owner and not is_assignee:
+            raise ForbiddenOperationError(
+                "You don't have permission to access this conversation"
+            )
+
+        return conversation
+    
+    @staticmethod
+    def get_other_participant_id(
+        session: Session,
+        current_user: User,
+        conversation_id: UUID,
+    ) -> UUID:
+        conversation = ConversationRepository.get_active_by_id(
+            session,
+            conversation_id,
+        )
+
+        if conversation is None:
+            raise ConversationNotFoundError(
+                "Active conversation not found"
+            )
+
+        task = TaskRepository.get_active_by_id(
+            session,
+            conversation.task_id,
+        )
+
+        if task is None:
+            raise TaskNotFoundError(
+                "Task not found"
+            )
+
+        is_owner = task.owner_id == current_user.id
+        is_assignee = conversation.assignee_id == current_user.id
+        
+        if not is_owner and not is_assignee:
+            raise ForbiddenOperationError(
+                "You don't have permission to access this conversation"
+            )
+            
+        if is_owner:
+            return conversation.assignee_id
+        
+        return task.owner_id

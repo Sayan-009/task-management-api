@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     
+    upload_dir: str = "uploads"
+    
+    cloudinary_cloud_name: str
+    cloudinary_api_key: str
+    cloudinary_api_secret: str
     
     model_config = SettingsConfigDict(
         env_file=".env",
