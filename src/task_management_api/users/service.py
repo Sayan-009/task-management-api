@@ -5,6 +5,15 @@ from task_management_api.core.security import hash_password, verify_password
 from task_management_api.users.model import User
 from task_management_api.users.repository import UserRepository
 from task_management_api.users.schema import UserUpdate, UserStatusUpdate, UserRoleUpdate
+from task_management_api.core.exceptions import (
+    UserNotFoundError,
+    UserInactiveError,
+    NoUpdateFieldsError,
+    CannotModifyOwnAccountError,
+    PasswordUnchangedError,
+    UserAlreadyExistsError,
+    InvalidCredentialsError,
+)
 
 
 
@@ -23,7 +32,7 @@ class UserService:
         )
         
         if existing_user is not None:
-            raise ValueError("User with this email already exists")
+            raise UserAlreadyExistsError("User with this email already exists")
         
         
         user = User(
@@ -50,19 +59,17 @@ class UserService:
         )
         
         if exising_user is None:
-            raise ValueError(
-                "Invalid email or password"
-            )
+            raise InvalidCredentialsError("Invalid email or password")
         
         if not verify_password(
             password,
             exising_user.password_hash
         ):
-            raise ValueError("Invalid email or password")
+            raise InvalidCredentialsError("Invalid email or password")
          
         
         if not exising_user.is_active:
-            raise ValueError("User account is inactive")
+            raise UserInactiveError("User account is inactive")
 
         return exising_user
     
@@ -75,7 +82,7 @@ class UserService:
     ) -> User:
         updates = update_data.model_dump(exclude_unset=True)
         if not updates:
-            raise ValueError("No fields provided for update")
+            raise NoUpdateFieldsError("No fields provided for update")
         
         if "email" in updates:
             new_email = updates["email"]
@@ -87,9 +94,7 @@ class UserService:
                 )
 
                 if existing_user is not None:
-                    raise ValueError(
-                        "Email already exists, use a different email"
-                    )
+                    raise UserAlreadyExistsError("User with this email already exists")
         
         return UserRepository.update(
             session,
@@ -109,10 +114,10 @@ class UserService:
             current_password,
             current_user.password_hash   
         ):
-            raise ValueError("Current password is incorrect")
+            raise InvalidCredentialsError("Current password is incorrect")
         
         if current_password == new_password:
-            raise ValueError("new password must be differnt from current password")
+            raise PasswordUnchangedError("New password must be different from current password")
         
         
         new_password_hashed = hash_password(new_password)
@@ -156,10 +161,10 @@ class UserService:
         )
 
         if target_user is None:
-            raise ValueError("User not found")
+            raise UserNotFoundError("User not found")
 
         if admin.id == user_id:
-            raise ValueError("Admin can't change own status")
+            raise CannotModifyOwnAccountError("Admin can't change own status")
 
         UserRepository.status_update(
             session,
@@ -183,10 +188,10 @@ class UserService:
         )
 
         if target_user is None:
-            raise ValueError("User not found")
+            raise UserNotFoundError("User not found")
 
         if admin.id == user_id:
-            raise ValueError("Admin can't change own role")
+            raise CannotModifyOwnAccountError("Admin can't change own role")
 
         UserRepository.role_update(
             session,

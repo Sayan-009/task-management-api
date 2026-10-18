@@ -17,14 +17,6 @@ from task_management_api.conversations.message_schema import (
     UpdateMessageRequest,
     MessageListResponse
 )
-from task_management_api.core.exceptions import (
-    TaskNotFoundError,
-    ConversationNotFoundError,
-    ForbiddenOperationError,
-    MessageNotFoundError,
-    MessageAlreadyDeletedError,
-    MessageEditLimitExceededError
-)
 
 from task_management_api.realtime.websocket.manager import (
     connection_manager
@@ -120,26 +112,9 @@ async def create_message(
 
         return created_message
     
-    except TaskNotFoundError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-      
-    except ConversationNotFoundError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-    except ForbiddenOperationError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc  
+        raise
         
         
         
@@ -195,48 +170,9 @@ async def update_message(
         
         return updated_message
     
-    except ValueError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=str(exc)
-        ) from exc
-    
-    except ConversationNotFoundError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-    except MessageNotFoundError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-        
-    except MessageAlreadyDeletedError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        ) from exc
-        
-    except ForbiddenOperationError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
-    
-    except MessageEditLimitExceededError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        ) from exc
+        raise
     
     
 @message_router.delete(
@@ -276,34 +212,9 @@ async def delete_message(
             },
         )
     
-    except ConversationNotFoundError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-    except MessageNotFoundError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-        
-    except MessageAlreadyDeletedError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        ) from exc
-        
-    except ForbiddenOperationError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
+        raise
         
         
 @message_router.get(
@@ -318,34 +229,15 @@ def get_messages(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db)
 ) -> MessageListResponse:
-    try:
-        messages = MessageService.get_messages(
-            session,
-            current_user,
-            conversation_id,
-            page,
-            limit
-        )
+    messages = MessageService.get_messages(
+        session,
+        current_user,
+        conversation_id,
+        page,
+        limit
+    )
         
-        return messages
-    
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc       
-    
-    except ConversationNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
+    return messages
     
     
     
@@ -374,33 +266,10 @@ def get_deleted_task_messages(
     session: Session = Depends(get_db),
 ) -> MessageListResponse:
 
-    try:
-
-        return MessageService.get_deleted_task_messages(
-            session=session,
-            current_user=current_user,
-            conversation_id=conversation_id,
-            page=page,
-            limit=limit
-        )
-
-    except ConversationNotFoundError as exc:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-
-    except TaskNotFoundError as exc:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-
-    except ForbiddenOperationError as exc:
-
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
+    return MessageService.get_deleted_task_messages(
+        session=session,
+        current_user=current_user,
+        conversation_id=conversation_id,
+        page=page,
+        limit=limit
+    )

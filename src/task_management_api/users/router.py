@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -41,42 +41,35 @@ def create_user(
         
         return user
     
-    except ValueError as exc:
+    except Exception:
         session.rollback()
-        
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
+        raise
         
         
 
-@router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    status_code=status.HTTP_200_OK,
+)
 def login_user(
     user_data: UserLogin,
-    session: Session = Depends(get_db)
+    session: Session = Depends(get_db),
 ) -> TokenResponse:
-    try:
-        user = UserService.login_user(
-            session=session,
-            email=user_data.email,
-            password=user_data.password,
-        )
-        
-        access_token = TokenService.create_access_token(subject=str(user.id))
-        
-        return TokenResponse(
-            access_token=access_token,
-            token_type="bearer",
-        )
-        
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
+    user = UserService.login_user(
+        session=session,
+        email=user_data.email,
+        password=user_data.password,
+    )
 
+    access_token = TokenService.create_access_token(
+        subject=str(user.id)
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+    )
 
 
 @router.post("/token", response_model=TokenResponse)
@@ -84,26 +77,20 @@ def login_for_swagger(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: Session = Depends(get_db),
 ) -> TokenResponse:
-    try:
-        user = UserService.login_user(
-            session=session,
-            email=form_data.username,
-            password=form_data.password,
-        )
-        
-        access_token = TokenService.create_access_token(subject=str(user.id))
-        
-        return TokenResponse(
-            access_token=access_token,
-            token_type="bearer",
-        )
-        
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
+    user = UserService.login_user(
+        session=session,
+        email=form_data.username,
+        password=form_data.password,
+    )
+
+    access_token = TokenService.create_access_token(
+        subject=str(user.id)
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+    )
 
 
 
@@ -131,13 +118,9 @@ def current_user_update(
         
         return updated_user
     
-    except ValueError as exc:
+    except Exception:
         session.rollback()
-        
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
+        raise
         
         
         
@@ -159,14 +142,9 @@ def password_update(
         
         return MessageResponse(message="Password changed successfully")
     
-    except ValueError as exc:
-        
+    except Exception:
         session.rollback()
-        
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc)
-        ) from exc
+        raise
         
         
 
@@ -175,12 +153,17 @@ def user_deactivate(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ) -> MessageResponse:
-    
-    UserService.deactivate_user(session, current_user)
-    
-    session.commit()
-            
-    return MessageResponse(message="User deactivated successfully")
+    try:
+        
+        UserService.deactivate_user(session, current_user)
+        
+        session.commit()
+                
+        return MessageResponse(message="User deactivated successfully")
+
+    except Exception:
+        session.rollback()
+        raise
 
 
 @router.get(
@@ -210,14 +193,9 @@ def update_user_status(
         
         return MessageResponse(message="User status updated successfully")
     
-    except ValueError as exc:
-        
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
+        raise
         
         
 @router.patch("/{user_id}/role", response_model=MessageResponse, status_code=status.HTTP_200_OK)
@@ -235,10 +213,6 @@ def update_user_role(
         
         return MessageResponse(message="User role updated successfully")
     
-    except ValueError as exc:
-        
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
+        raise 

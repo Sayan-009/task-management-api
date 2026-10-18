@@ -10,7 +10,8 @@ from task_management_api.conversations.attachment_repository import AttachmentRe
 from task_management_api.core.exceptions import (
     AttachmentNotFoundError,
     AttachmentNotAttachedError,
-    ForbiddenOperationError
+    ForbiddenOperationError,
+    InvalidAttachmentError,
 )
 
 from task_management_api.conversations.attachment_model import MessageAttachment
@@ -55,7 +56,7 @@ class AttachmentService:
         allowed_types = ALLOWED_IMAGE_TYPES | ALLOWED_FILE_TYPES
         
         if file.content_type not in allowed_types:
-            raise ValueError("Unsupported file type")
+            raise InvalidAttachmentError("Unsupported file type")
         
         
         if file.content_type in ALLOWED_IMAGE_TYPES:
@@ -64,7 +65,7 @@ class AttachmentService:
             max_size = MAX_FILE_SIZE
         
         if not file.filename:
-            raise ValueError("Filename is missing")
+            raise InvalidAttachmentError("Filename is missing")
         
         stored_name = f"{uuid4()}{Path(file.filename).suffix}"
         
