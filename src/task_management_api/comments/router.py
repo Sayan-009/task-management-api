@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, status, Depends, HTTPException, Query
+from fastapi import APIRouter, status, Depends, Query
 from sqlalchemy.orm import Session
 
 from task_management_api.core.dependencies import get_current_user
@@ -10,13 +10,6 @@ from task_management_api.db.session import get_db
 from task_management_api.users.model import User
 from task_management_api.comments.service import CommentService
 
-
-from task_management_api.core.exceptions import (
-    TaskNotFoundError,
-    CommentNotFoundError,
-    ForbiddenOperationError,
-    UpdateSameContentError
-)
 from task_management_api.comments.schema import (
     CreateComment,
     CommentResponse,
@@ -55,19 +48,9 @@ def create_comment(
         
         return comment
 
-    except TaskNotFoundError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-    except ForbiddenOperationError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
+        raise
         
         
 @task_router.get("/{task_id}/comments", response_model=CommentListResponse, status_code=status.HTTP_200_OK)
@@ -86,26 +69,13 @@ def get_comments(
     session: Session = Depends(get_db)
 ) -> CommentListResponse:
 
-    try:
-        return CommentService.get_comments(
-            session=session,
-            current_user=current_user,
-            task_id=task_id,
-            page=page,
-            limit=limit,
-        )
-
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
+    return CommentService.get_comments(
+        session=session,
+        current_user=current_user,
+        task_id=task_id,
+        page=page,
+        limit=limit,
+    )
         
         
 @comment_router.patch("/{comment_id}", response_model=CommentResponse, status_code=status.HTTP_200_OK)
@@ -127,27 +97,9 @@ def update_comment(
         
         return updated_comment
  
-    except CommentNotFoundError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc       
-    
-            
-    except ForbiddenOperationError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
-        
-    except UpdateSameContentError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        ) from exc
+        raise
         
         
 @comment_router.delete("/{comment_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
@@ -166,18 +118,7 @@ def delete_comment(
         
         session.commit()
         
-    except CommentNotFoundError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc       
-    
-            
-    except ForbiddenOperationError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
+        raise
           

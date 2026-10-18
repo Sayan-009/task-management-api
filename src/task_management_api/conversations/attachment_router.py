@@ -1,7 +1,7 @@
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, status, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, status, Depends, UploadFile, File
 from fastapi.responses import FileResponse
 from fastapi.responses import RedirectResponse
 
@@ -15,11 +15,6 @@ from task_management_api.users.model import User
 from task_management_api.conversations.attachment_service import AttachmentService
 from task_management_api.conversations.attachment_schema import AttachmentResponse
 
-from task_management_api.core.exceptions import (
-    AttachmentNotAttachedError,
-    AttachmentNotFoundError,
-    ForbiddenOperationError
-)
 
 
 attachment_router = APIRouter(
@@ -50,12 +45,9 @@ async def file_upload(
 
         return uploaded_attachments
     
-    except ValueError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        )
+        raise
         
     
 @attachment_router.get("/{attachment_id}")
@@ -65,36 +57,17 @@ async def get_attachment(
     attachment_service: AttachmentService = Depends(get_attachment_service),
     session: Session = Depends(get_db),
 ):
-    try:
-        attachment = attachment_service.get_attachment_for_user(
-            session,
-            current_user,
-            attachment_id,
-        )
+    attachment = attachment_service.get_attachment_for_user(
+        session,
+        current_user,
+        attachment_id,
+    )
 
-        url = attachment_service.storage.get_url(
-            attachment.file_path,
-        )
+    url = attachment_service.storage.get_url(
+        attachment.file_path,
+    )
 
-        return RedirectResponse(
-            url=url,
-            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
-        )
-
-    except AttachmentNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        )
-
-    except AttachmentNotAttachedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        )
-
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        )
+    return RedirectResponse(
+        url=url,
+        status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+    )

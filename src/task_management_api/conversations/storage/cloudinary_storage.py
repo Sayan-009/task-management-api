@@ -105,11 +105,13 @@ class CloudinaryFileStorage(FileStorage):
             cloudinary.uploader.destroy,
             file_path,
             resource_type=resource_type,
+            type="authenticated",
         )
         
     def get_url(
         self,
         file_path: str,
+        expires_in: int = 3600,
     ) -> str:
 
         resource_type = (
@@ -117,6 +119,9 @@ class CloudinaryFileStorage(FileStorage):
             if "/images/" in file_path
             else "raw"
         )
+
+        import time
+        expires_at = int(time.time()) + expires_in
 
         if resource_type == "raw":
             file_format = Path(file_path).suffix.lstrip(".")
@@ -127,6 +132,7 @@ class CloudinaryFileStorage(FileStorage):
                 resource_type="raw",
                 type="authenticated",
                 secure=True,
+                expires_at=expires_at,
             )
 
         url, _ = utils.cloudinary_url(
@@ -135,6 +141,7 @@ class CloudinaryFileStorage(FileStorage):
             type="authenticated",
             secure=True,
             sign_url=True,
+            expires_at=expires_at,
         )
 
         return url

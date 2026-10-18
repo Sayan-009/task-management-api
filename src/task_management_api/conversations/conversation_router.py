@@ -5,7 +5,6 @@ from fastapi import (
     status,
     Depends,
     Query,
-    HTTPException
 )
 from sqlalchemy.orm import Session
 
@@ -19,10 +18,7 @@ from task_management_api.conversations.conversation_service import (
 from task_management_api.conversations.conversation_schema import (
     ConversationListResponse
 )
-from task_management_api.core.exceptions import (
-    TaskNotFoundError,
-    ForbiddenOperationError
-)
+
 
 
 conv_router = APIRouter(
@@ -44,26 +40,13 @@ def get_conversations(
     session: Session = Depends(get_db),
 ) -> ConversationListResponse:
 
-    try:
-        return ConversationService.get_conversation(
-            session=session,
-            current_user=current_user,
-            task_id=task_id,
-            page=page,
-            limit=limit
-        )
-
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
+    return ConversationService.get_conversation(
+        session=session,
+        current_user=current_user,
+        task_id=task_id,
+        page=page,
+        limit=limit
+    )
         
         
 @conv_router.get(
@@ -86,26 +69,10 @@ def get_deleted_task_conversations(
     session: Session = Depends(get_db),
 ) -> ConversationListResponse:
 
-    try:
-
-        return ConversationService.get_deleted_task_conversations(
-            session=session,
-            current_user=current_user,
-            task_id=task_id,
-            page=page,
-            limit=limit
-        )
-
-    except TaskNotFoundError as exc:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-
-    except ForbiddenOperationError as exc:
-
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
+    return ConversationService.get_deleted_task_conversations(
+        session=session,
+        current_user=current_user,
+        task_id=task_id,
+        page=page,
+        limit=limit
+    )

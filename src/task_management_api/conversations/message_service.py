@@ -28,6 +28,7 @@ from task_management_api.core.exceptions import (
     MessageEditLimitExceededError,
     AttachmentNotFoundError,
     AttachmentAlreadyAttachedError,
+    MessageContentUnchangedError,
 )
 
 from task_management_api.conversations.attachment_schema import (
@@ -244,7 +245,7 @@ class MessageService:
             )
             
         if message.content == updated_message.content:
-            raise ValueError(
+            raise MessageContentUnchangedError(
                 "You can't update a message with the same content"
             )
 

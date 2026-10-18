@@ -1,13 +1,11 @@
 from uuid import UUID
 from fastapi import Query
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, status, HTTPException
-
+from fastapi import APIRouter, Depends, status
 
 from task_management_api.db.session import get_db
 from task_management_api.core.dependencies import get_current_user
 from task_management_api.users.model import User
-from task_management_api.tasks.model import Task
 from task_management_api.tasks.service import TaskService
 from task_management_api.tasks.enums import (TaskPriority, TaskStatus, TaskOrder, TaskSort, AssignedTaskSort)
 from task_management_api.tasks.schema import (
@@ -21,18 +19,6 @@ from task_management_api.tasks.schema import (
     TaskDetailResponse, 
     AssignedTaskListResponse,
     TaskActivityListResponse
-)
-from task_management_api.core.exceptions import (
-    TaskNotFoundError,
-    ForbiddenOperationError,
-    NoUpdateFieldsError,
-    DuplicateAssigneeError,
-    UserNotFoundError,
-    UserInactiveError,
-    AlreadyAssignedError,
-    AssignmentNotFoundError,
-    TaskAlreadyDeletedError,
-    TaskNotDeletedError
 )
 
 
@@ -70,8 +56,8 @@ def get_user_tasks(
     order: TaskOrder = TaskOrder.ASC,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
-    page: int = 1,
-    limit: int = 10,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
 ) -> TaskListResponse:
      
     return TaskService.get_user_tasks(
@@ -139,26 +125,13 @@ def get_task_details(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ) -> TaskDetailResponse:
-    try:
-        task_details = TaskService.get_task_details(
-            session,
-            current_user,
-            task_id
-        )
+    task_details = TaskService.get_task_details(
+        session,
+        current_user,
+        task_id
+    )
         
-        return task_details
-    
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        ) from exc
+    return task_details
         
         
 @router.patch("/{task_id}", response_model=TaskResponse, status_code=status.HTTP_200_OK)
@@ -177,23 +150,9 @@ def update_task(
         
         return task
     
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        ) from exc     
-        
-    except NoUpdateFieldsError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        ) from exc
+    except Exception:
+        session.rollback()
+        raise
         
         
 @router.patch("/{task_id}/status", response_model=TaskResponse, status_code=status.HTTP_200_OK)
@@ -214,17 +173,9 @@ def task_status_update(
         session.commit()
         return task
     
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-    
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        ) from exc      
+    except Exception:
+        session.rollback()
+        raise  
         
 
 
@@ -247,26 +198,9 @@ def hard_delete_task(
 
         session.commit()
 
-    except TaskNotFoundError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    except ForbiddenOperationError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        ) from exc
-
-    except TaskNotDeletedError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc   
+        raise
         
         
 @router.delete("/{task_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT,)
@@ -284,26 +218,9 @@ def soft_delete_task(
 
         session.commit()
 
-    except TaskNotFoundError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    except ForbiddenOperationError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        ) from exc
-
-    except TaskAlreadyDeletedError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
+        raise
         
         
 @router.post("/{task_id}/restore", response_model=TaskResponse, status_code=status.HTTP_200_OK)
@@ -324,26 +241,9 @@ def restore_task(
 
         return task
 
-    except TaskNotFoundError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    except ForbiddenOperationError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc),
-        ) from exc
-
-    except TaskNotDeletedError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
+        raise
         
 
 @router.post(
@@ -369,47 +269,9 @@ def assign_users(
         
         return task_assignments
     
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-        
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
-        
-        
-    except DuplicateAssigneeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        ) from exc
-            
-            
-            
-    except UserNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-        
-    except UserInactiveError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc)
-        ) from exc
-        
-        
-    except AlreadyAssignedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc)
-        ) from exc
+    except Exception:
+        session.rollback()
+        raise
         
         
         
@@ -430,32 +292,9 @@ def delete_assignee(
         
         session.commit()
         
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-        
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
-
-
-    except UserNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-        
-    except AssignmentNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+    except Exception:
+        session.rollback()
+        raise   
         
         
         
@@ -478,17 +317,10 @@ def update_my_status(
         
         return task_assignee
     
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
+    except Exception:
+        session.rollback()
+        raise
         
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
         
         
 @router.delete(
@@ -510,19 +342,9 @@ def leave_task(
 
         session.commit()
 
-    except TaskNotFoundError as exc:
+    except Exception:
         session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    except AssignmentNotFoundError as exc:
-        session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+        raise
         
         
         
@@ -534,26 +356,11 @@ def get_task_activities(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db),
 ) -> TaskActivityListResponse:
-    try:
-        return TaskService.get_task_activities(
-            session,
-            task_id,
-            current_user,
-            page, 
-            limit,
-        )
-        
-    except TaskNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        ) from exc
-        
-    except ForbiddenOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(exc)
-        ) from exc
-        
-        
+    return TaskService.get_task_activities(
+        session,
+        task_id,
+        current_user,
+        page, 
+        limit,
+    )
 
