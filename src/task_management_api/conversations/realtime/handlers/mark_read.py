@@ -24,7 +24,7 @@ class MarkReadHandler:
             for message_id in message_ids
         ]
 
-        messages = MessageService.mark_messages_as_read(
+        messages = await MessageService.mark_messages_as_read(
             session=context.session,
             current_user=context.current_user,
             conversation_id=context.conversation_id,
@@ -37,10 +37,10 @@ class MarkReadHandler:
         read_at = messages[0].read_at
         read_at_str = read_at.isoformat() if read_at is not None else None
 
-        context.session.commit()
+        await context.session.commit()
 
         other_participant_id = (
-            ConversationService.get_other_participant_id(
+            await ConversationService.get_other_participant_id(
                 session=context.session,
                 current_user=context.current_user,
                 conversation_id=context.conversation_id,

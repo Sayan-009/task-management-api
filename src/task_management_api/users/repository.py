@@ -1,6 +1,6 @@
 from uuid import UUID
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from task_management_api.users.model import User
@@ -11,38 +11,42 @@ from task_management_api.users.schema import UserStatusUpdate, UserRoleUpdate
 class UserRepository:
     
     @staticmethod
-    def create(
-        session: Session,
+    async def create(
+        session: AsyncSession,
         user: User,
     ) -> User:
         session.add(user)
-        session.flush()
+        await session.flush()
         
         return user
     
     @staticmethod
-    def get_by_email(
-        session: Session,
+    async def get_by_email(
+        session: AsyncSession,
         email: str,
     ) -> User | None:
         statement = select(User).where(User.email == email)
         
-        return session.execute(statement).scalar_one_or_none()
+        result = await session.execute(statement)
+        
+        return result.scalar_one_or_none()
     
     
     @staticmethod
-    def get_by_id(
-        session: Session,
+    async def get_by_id(
+        session: AsyncSession,
         user_id: UUID,
     ) -> User | None:
         statement = select(User).where(User.id == user_id)
         
-        return session.execute(statement).scalar_one_or_none()
+        result = await session.execute(statement)
+        
+        return result.scalar_one_or_none()
     
     
     @staticmethod
-    def update(
-        session: Session,
+    async def update(
+        session: AsyncSession,
         current_user: User,
         updates: dict,
     ) -> User:
@@ -50,60 +54,60 @@ class UserRepository:
         for field, value in updates.items():
             setattr(current_user, field, value)
             
-        session.flush()
+        await session.flush()
         
         return current_user
     
     
     @staticmethod
-    def update_password(
-        session: Session,
+    async def update_password(
+        session: AsyncSession,
         current_user: User,
         new_password_hashed: str
     ) -> User:
         current_user.password_hash = new_password_hashed
         
-        session.flush()
+        await session.flush()
         
         return current_user
     
     @staticmethod
-    def deactivate(
-        session: Session,
+    async def deactivate(
+        session: AsyncSession,
         current_user: User
     ) -> None:
         current_user.is_active = False
         
-        session.flush()
+        await session.flush()
         
         
     @staticmethod
-    def status_update(
-        session: Session,
+    async def status_update(
+        session: AsyncSession,
         user: User,
         user_status: UserStatusUpdate,
     ) -> None:
         user.is_active = user_status.is_active
-        session.flush()
+        await session.flush()
         
         
     @staticmethod
-    def role_update(
-        session: Session,
+    async def role_update(
+        session: AsyncSession,
         user: User,
         role: UserRoleUpdate,
     ) -> None:
         user.role = role.role
-        session.flush()
+        await session.flush()
                 
     
     @staticmethod
-    def get_all(
-        session: Session,
+    async def get_all(
+        session: AsyncSession,
     ) -> list[User]:
         statement = select(User)
 
-        return session.execute(statement).scalars().all()
+        result = await session.execute(statement)
+        return result.scalars().all()
             
-       
             

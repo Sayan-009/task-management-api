@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.users.model import User
 
@@ -13,11 +13,11 @@ class PresenceService:
     
     @staticmethod
     async def handle_user_online(
-        session: Session,
+        session: AsyncSession,
         user: User,
     ) -> None:
         
-        related_user_ids = ConversationService.get_related_user_ids(
+        related_user_ids = await ConversationService.get_related_user_ids(
             session=session,
             user_id=user.id,
         )
@@ -38,11 +38,11 @@ class PresenceService:
 
     @staticmethod
     async def send_presence_snapshot(
-        session: Session,
+        session: AsyncSession,
         user: User,
     ) -> None:
 
-        related_user_ids = ConversationService.get_related_user_ids(
+        related_user_ids = await ConversationService.get_related_user_ids(
             session=session,
             user_id=user.id,
         )
@@ -67,14 +67,14 @@ class PresenceService:
     
     @staticmethod
     async def handle_user_offline(
-        session: Session,
+        session: AsyncSession,
         user: User,
     ) -> None:
         
         user.last_seen_at = datetime.now(timezone.utc)
-        session.commit()
+        await session.commit()
         
-        related_user_ids = ConversationService.get_related_user_ids(
+        related_user_ids = await ConversationService.get_related_user_ids(
             session=session,
             user_id=user.id,
         )

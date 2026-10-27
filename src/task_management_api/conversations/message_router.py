@@ -1,9 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, status, Depends, HTTPException, Query
 
-from sqlalchemy.orm import (
-    Session
-)
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.core.dependencies import get_current_user
 from task_management_api.db.session import get_db
@@ -41,20 +39,20 @@ async def create_message(
     conversation_id: UUID,
     message: CreateMessageRequest,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
     try:
-        created_message = MessageService.create_message(
+        created_message = await MessageService.create_message(
             session,
             current_user,
             conversation_id,
             message
         )
 
-        session.commit()
+        await session.commit()
         
         
-        other_participant_id = ConversationService.get_other_participant_id(
+        other_participant_id = await ConversationService.get_other_participant_id(
             session=session,
             current_user=current_user,
             conversation_id=conversation_id,
@@ -113,7 +111,7 @@ async def create_message(
         return created_message
     
     except Exception:
-        session.rollback()
+        await session.rollback()
         raise
         
         
@@ -128,10 +126,10 @@ async def update_message(
     message_id: UUID,
     updated_message: UpdateMessageRequest,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> MessageResponse:
     try:
-        updated_message = MessageService.update_message(
+        updated_message = await MessageService.update_message(
             session,
             current_user,
             updated_message,
@@ -139,10 +137,10 @@ async def update_message(
             message_id
         )
         
-        session.commit()
+        await session.commit()
         
         
-        other_participant_id = ConversationService.get_other_participant_id(
+        other_participant_id = await ConversationService.get_other_participant_id(
             session=session,
             current_user=current_user,
             conversation_id=conversation_id,
@@ -171,7 +169,7 @@ async def update_message(
         return updated_message
     
     except Exception:
-        session.rollback()
+        await session.rollback()
         raise
     
     
@@ -184,18 +182,18 @@ async def delete_message(
     conversation_id: UUID,
     message_id: UUID,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> None:
     try:
-        deleted_message = MessageService.delete_message(
+        deleted_message = await MessageService.delete_message(
             session,
             current_user,
             conversation_id,
             message_id
         )
-        session.commit()
+        await session.commit()
         
-        other_participant_id = ConversationService.get_other_participant_id(
+        other_participant_id = await ConversationService.get_other_participant_id(
             session=session,
             current_user=current_user,
             conversation_id=conversation_id,
@@ -213,7 +211,7 @@ async def delete_message(
         )
     
     except Exception:
-        session.rollback()
+        await session.rollback()
         raise
         
         
@@ -222,14 +220,14 @@ async def delete_message(
     response_model=MessageListResponse,
     status_code=status.HTTP_200_OK
 )
-def get_messages(
+async def get_messages(
     conversation_id: UUID,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> MessageListResponse:
-    messages = MessageService.get_messages(
+    messages = await MessageService.get_messages(
         session,
         current_user,
         conversation_id,
@@ -247,7 +245,7 @@ def get_messages(
     response_model=MessageListResponse,
     status_code=status.HTTP_200_OK
 )
-def get_deleted_task_messages(
+async def get_deleted_task_messages(
     conversation_id: UUID,
 
     page: int = Query(
@@ -263,10 +261,10 @@ def get_deleted_task_messages(
 
     current_user: User = Depends(get_current_user),
 
-    session: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_db),
 ) -> MessageListResponse:
 
-    return MessageService.get_deleted_task_messages(
+    return await MessageService.get_deleted_task_messages(
         session=session,
         current_user=current_user,
         conversation_id=conversation_id,

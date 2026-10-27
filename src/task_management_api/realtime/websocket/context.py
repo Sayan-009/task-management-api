@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.users.model import User
 
@@ -11,6 +11,6 @@ from task_management_api.users.model import User
 class WebSocketEventContext:
     data: dict[str, Any]
     current_user: User
-    session: Session
+    session: AsyncSession
     conversation_id: UUID | None = None
     

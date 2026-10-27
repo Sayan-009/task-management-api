@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, status, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.core.dependencies import get_current_user
 from task_management_api.db.session import get_db
@@ -29,32 +29,32 @@ comment_router = APIRouter(
 )
 
 @task_router.post("/{task_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
-def create_comment(
+async def create_comment(
     task_id: UUID,
     comment_data: CreateComment,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> CommentResponse:
     
     try:
-        comment = CommentService.create_comment(
+        comment = await CommentService.create_comment(
             session,
             task_id,
             current_user,
             comment_data,
         )
         
-        session.commit()
+        await session.commit()
         
         return comment
 
     except Exception:
-        session.rollback()
+        await session.rollback()
         raise
         
         
 @task_router.get("/{task_id}/comments", response_model=CommentListResponse, status_code=status.HTTP_200_OK)
-def get_comments(
+async def get_comments(
     task_id: UUID,
     page: int = Query(
         default=1,
@@ -66,10 +66,10 @@ def get_comments(
         le=100
     ),
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> CommentListResponse:
 
-    return CommentService.get_comments(
+    return await CommentService.get_comments(
         session=session,
         current_user=current_user,
         task_id=task_id,
@@ -79,46 +79,46 @@ def get_comments(
         
         
 @comment_router.patch("/{comment_id}", response_model=CommentResponse, status_code=status.HTTP_200_OK)
-def update_comment(
+async def update_comment(
     comment_id: UUID,
     update_data: UpdateComment,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> CommentResponse:
     try:
-        updated_comment = CommentService.update_comment(
+        updated_comment = await CommentService.update_comment(
             session,
             comment_id,
             current_user,
             update_data
         )
         
-        session.commit()
+        await session.commit()
         
         return updated_comment
  
     except Exception:
-        session.rollback()
+        await session.rollback()
         raise
         
         
 @comment_router.delete("/{comment_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
-def delete_comment(
+async def delete_comment(
     comment_id: UUID,
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> None:
     
     try:
-        CommentService.delete_comment(
+        await CommentService.delete_comment(
             session,
             comment_id,
             current_user
         )
         
-        session.commit()
+        await session.commit()
         
     except Exception:
-        session.rollback()
+        await session.rollback()
         raise
           

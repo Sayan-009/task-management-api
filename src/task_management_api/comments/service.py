@@ -1,8 +1,7 @@
 import math
 from uuid import UUID
 from fastapi import Query
-from sqlalchemy.orm import Session
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from task_management_api.users.model import User
 from task_management_api.tasks.repository import TaskRepository
 from task_management_api.comments.repository import CommentRepository
@@ -25,14 +24,14 @@ from task_management_api.comments.schema import (
 class CommentService:
     
     @staticmethod
-    def create_comment(
-        session: Session,
+    async def create_comment(
+        session: AsyncSession,
         task_id: UUID,
         current_user: User,
         comment_data: CreateComment,
     ) -> CommentResponse:
 
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             task_id
         )
@@ -44,7 +43,7 @@ class CommentService:
 
         is_owner = current_user.id == task.owner_id
 
-        is_task_assignee = TaskRepository.get_by_task_user(
+        is_task_assignee = await TaskRepository.get_by_task_user(
             session,
             task_id,
             user_id=current_user.id
@@ -55,7 +54,7 @@ class CommentService:
                 "You don't have permission to write the comment for this task"
             )
 
-        return CommentRepository.create(
+        return await CommentRepository.create(
             session,
             task_id,
             current_user,
@@ -64,13 +63,13 @@ class CommentService:
     
     
     @staticmethod
-    def update_comment(
-        session: Session,
+    async def update_comment(
+        session: AsyncSession,
         comment_id: UUID,
         current_user: User,
         update_data: UpdateComment,
     ) -> CommentResponse:
-        comment = CommentRepository.get_active_comment(
+        comment = await CommentRepository.get_active_comment(
             session,
             comment_id
         )
@@ -90,7 +89,7 @@ class CommentService:
                 "You can't update your comment by same comment"
             )
             
-        updated_comment = CommentRepository.update(
+        updated_comment = await CommentRepository.update(
             session,
             comment,
             update_data,
@@ -115,12 +114,12 @@ class CommentService:
         
         
     @staticmethod
-    def delete_comment(
-        session: Session,
+    async def delete_comment(
+        session: AsyncSession,
         comment_id: UUID,
         current_user: User
     ) -> None:
-        comment = CommentRepository.get_active_comment(
+        comment = await CommentRepository.get_active_comment(
             session,
             comment_id
         )
@@ -136,7 +135,7 @@ class CommentService:
             )        
             
             
-        CommentRepository.soft_delete(
+        await CommentRepository.soft_delete(
             session,
             comment
         )
@@ -144,8 +143,8 @@ class CommentService:
         
         
     @staticmethod
-    def get_comments(
-        session: Session,
+    async def get_comments(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
         page: int,
@@ -153,7 +152,7 @@ class CommentService:
     ) -> CommentListResponse:
 
         
-        task = TaskRepository.get_by_id(
+        task = await TaskRepository.get_by_id(
             session,
             task_id
         )
@@ -167,7 +166,7 @@ class CommentService:
         is_owner = current_user.id == task.owner_id
 
         is_task_assignee = (
-            TaskRepository.get_by_task_user(
+            await TaskRepository.get_by_task_user(
                 session,
                 task_id,
                 user_id=current_user.id
@@ -185,7 +184,7 @@ class CommentService:
                 "You are not allowed to see comments of this task"
             )
             
-        comments, total = CommentRepository.comments_by_task_id(
+        comments, total = await CommentRepository.comments_by_task_id(
             session=session,
             task_id=task_id,
             page=page,

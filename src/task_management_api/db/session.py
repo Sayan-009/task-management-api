@@ -1,25 +1,25 @@
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+)
 
 from task_management_api.db.database import engine
 
 
-SessionFactory = sessionmaker(
+SessionFactory = async_sessionmaker(
     bind=engine,
-    class_=Session,
+    class_=AsyncSession,
     autoflush=False,
     expire_on_commit=False,
 )
 
 
-def get_db() -> Generator[Session, None, None]:
-    session = SessionFactory()
-
-    try:
-        yield session
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionFactory() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise

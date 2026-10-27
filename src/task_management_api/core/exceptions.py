@@ -18,6 +18,16 @@ class InvalidCredentialsError(AppException):
 class PasswordUnchangedError(AppException):
     status_code = status.HTTP_400_BAD_REQUEST
     code = "PASSWORD_UNCHANGED"
+    
+    
+class TokenExpiredError(AppException):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    code = "TOKEN_EXPIRED"
+    
+    
+class InvalidTokenError(AppException):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    code = "INVALID_TOKEN"
 
 # Users
 class UserAlreadyExistsError(AppException):

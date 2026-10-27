@@ -1,14 +1,13 @@
 import math
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.conversations.conversation_model import PrivateConversation
 from task_management_api.conversations.conversation_repository import ConversationRepository
 from task_management_api.tasks.repository import TaskRepository
 from task_management_api.conversations.enums import ConversationStatus
 from task_management_api.users.model import User
-from task_management_api.tasks.assignee_model import TaskAssignee
 from task_management_api.conversations.conversation_schema import (
     ConversationListResponse
 )
@@ -23,27 +22,27 @@ class ConversationService:
     
     
     @staticmethod
-    def create_or_reactive(
-        session: Session,
+    async def create_or_reactive(
+        session: AsyncSession,
         task_id: UUID,
         assignee_id: UUID
     ) -> PrivateConversation:
 
-        conversation = ConversationRepository.get_by_task_and_assignee(
+        conversation = await ConversationRepository.get_by_task_and_assignee(
             session,
             task_id,
             assignee_id
         )
         
         if conversation is None:
-            return ConversationRepository.create(
+            return await ConversationRepository.create(
                 session,
                 task_id,
                 assignee_id
             ) 
             
         if conversation.status == ConversationStatus.CLOSED:
-            return ConversationRepository.reactive(
+            return await ConversationRepository.reactive(
                 session,
                 conversation
             )
@@ -54,12 +53,12 @@ class ConversationService:
     
     
     @staticmethod
-    def close_conversation(
-        session: Session,
+    async def close_conversation(
+        session: AsyncSession,
         task_id: UUID,
         assignee_id: UUID,
     ) -> PrivateConversation | None:
-        conversation = ConversationRepository.get_by_task_and_assignee(
+        conversation = await ConversationRepository.get_by_task_and_assignee(
             session,
             task_id,
             assignee_id
@@ -69,7 +68,7 @@ class ConversationService:
             return None
             
         if conversation.status == ConversationStatus.ACTIVE:
-            return ConversationRepository.close(
+            return await ConversationRepository.close(
                 session,
                 conversation
             )
@@ -78,13 +77,13 @@ class ConversationService:
     
     
     @staticmethod
-    def get_related_user_ids(
-        session: Session,
+    async def get_related_user_ids(
+        session: AsyncSession,
         user_id: UUID
     ) -> set[UUID]:
         related_user_ids: set[UUID] = set()
         
-        related_conversations = ConversationRepository.get_active_by_participant(
+        related_conversations = await ConversationRepository.get_active_by_participant(
             session,
             user_id,
         )
@@ -101,15 +100,15 @@ class ConversationService:
     
     
     @staticmethod
-    def get_conversation(
-        session: Session,
+    async def get_conversation(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
         page: int = 1,
         limit: int = 10
     ) -> ConversationListResponse:
         
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             task_id
         )
@@ -120,7 +119,7 @@ class ConversationService:
             )
             
         is_owner = (task.owner_id == current_user.id)  
-        is_assignee = TaskRepository.get_by_task_user(
+        is_assignee = await TaskRepository.get_by_task_user(
             session,
             task_id,
             current_user.id,
@@ -131,7 +130,7 @@ class ConversationService:
                 "You don't have permission to see the conversations"
             )
             
-        conversations, total = ConversationRepository.get_conversations_by_task(
+        conversations, total = await ConversationRepository.get_conversations_by_task(
             session=session,
             task_id=task_id,
             assignee_id=current_user.id if is_assignee else None,
@@ -158,15 +157,15 @@ class ConversationService:
         
         
     @staticmethod
-    def get_deleted_task_conversations(
-        session: Session,
+    async def get_deleted_task_conversations(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
         page: int = 1,
         limit: int = 10
     ) -> ConversationListResponse:
 
-        task = TaskRepository.get_by_id(
+        task = await TaskRepository.get_by_id(
             session,
             task_id
         )
@@ -188,7 +187,7 @@ class ConversationService:
             )
 
         conversations, total = (
-            ConversationRepository.get_conversations_by_task(
+            await ConversationRepository.get_conversations_by_task(
                 session=session,
                 task_id=task_id,
                 page=page,
@@ -212,13 +211,13 @@ class ConversationService:
         
         
     @staticmethod
-    def validate_conversation_access(
-        session: Session,
+    async def validate_conversation_access(
+        session: AsyncSession,
         current_user: User,
         conversation_id: UUID,
     ) -> PrivateConversation:
 
-        conversation = ConversationRepository.get_active_by_id(
+        conversation = await ConversationRepository.get_active_by_id(
             session,
             conversation_id,
         )
@@ -228,7 +227,7 @@ class ConversationService:
                 "Active conversation not found"
             )
 
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             conversation.task_id,
         )
@@ -249,12 +248,12 @@ class ConversationService:
         return conversation
     
     @staticmethod
-    def get_other_participant_id(
-        session: Session,
+    async def get_other_participant_id(
+        session: AsyncSession,
         current_user: User,
         conversation_id: UUID,
     ) -> UUID:
-        conversation = ConversationRepository.get_active_by_id(
+        conversation = await ConversationRepository.get_active_by_id(
             session,
             conversation_id,
         )
@@ -264,7 +263,7 @@ class ConversationService:
                 "Active conversation not found"
             )
 
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             conversation.task_id,
         )

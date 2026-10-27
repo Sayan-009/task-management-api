@@ -6,7 +6,7 @@ from fastapi import (
     Depends,
     Query,
 )
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.db.session import get_db
 from task_management_api.core.dependencies import get_current_user
@@ -32,15 +32,15 @@ conv_router = APIRouter(
     response_model=ConversationListResponse,
     status_code=status.HTTP_200_OK
 )
-def get_conversations(
+async def get_conversations(
     task_id: UUID,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_db),
 ) -> ConversationListResponse:
 
-    return ConversationService.get_conversation(
+    return await ConversationService.get_conversation(
         session=session,
         current_user=current_user,
         task_id=task_id,
@@ -54,7 +54,7 @@ def get_conversations(
     response_model=ConversationListResponse,
     status_code=status.HTTP_200_OK
 )
-def get_deleted_task_conversations(
+async def get_deleted_task_conversations(
     task_id: UUID,
     page: int = Query(
         default=1,
@@ -66,10 +66,10 @@ def get_deleted_task_conversations(
         le=100
     ),
     current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_db),
 ) -> ConversationListResponse:
 
-    return ConversationService.get_deleted_task_conversations(
+    return await ConversationService.get_deleted_task_conversations(
         session=session,
         current_user=current_user,
         task_id=task_id,
