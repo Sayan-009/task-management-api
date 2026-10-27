@@ -1,6 +1,7 @@
 from uuid import UUID
 from sqlalchemy import select, func, or_
-from sqlalchemy.orm import Session, selectinload, join, joinedload
+from sqlalchemy.orm import selectinload, join, joinedload
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from task_management_api.conversations.conversation_model import PrivateConversation
@@ -12,29 +13,31 @@ from task_management_api.conversations.enums import ConversationStatus
 class ConversationRepository:
     
     @staticmethod
-    def get_by_id(
-        session: Session,
+    async def get_by_id(
+        session: AsyncSession,
         conversation_id: UUID,
     ) -> PrivateConversation | None:
         statement = select(PrivateConversation).where(
             PrivateConversation.id == conversation_id,
         )
-        return session.execute(statement).scalar_one_or_none()
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
     
     @staticmethod
-    def get_active_by_id(
-        session: Session,
+    async def get_active_by_id(
+        session: AsyncSession,
         conversation_id: UUID,
     ) -> PrivateConversation | None:
         statement = select(PrivateConversation).where(
             PrivateConversation.id == conversation_id,
             PrivateConversation.status == ConversationStatus.ACTIVE
         )
-        return session.execute(statement).scalar_one_or_none()
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
     
     @staticmethod
-    def get_by_task_and_assignee(
-        session: Session,
+    async def get_by_task_and_assignee(
+        session: AsyncSession,
         task_id: UUID,
         assignee_id: UUID
     ) -> PrivateConversation | None:
@@ -46,12 +49,13 @@ class ConversationRepository:
             )
         )
         
-        return session.execute(statement).scalar_one_or_none()
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
     
     
     @staticmethod
-    def get_active_by_participant(
-        session: Session,
+    async def get_active_by_participant(
+        session: AsyncSession,
         user_id: UUID,
     ) -> list[PrivateConversation]:
         statement = (
@@ -70,12 +74,13 @@ class ConversationRepository:
             )
         )
 
-        return session.execute(statement).scalars().all()
+        result = await session.execute(statement)
+        return result.scalars().all()
     
     
     @staticmethod
-    def get_conversations_by_task(
-        session: Session,
+    async def get_conversations_by_task(
+        session: AsyncSession,
         task_id: UUID,
         assignee_id: UUID | None = None,
         page: int = 1,
@@ -92,11 +97,11 @@ class ConversationRepository:
                 PrivateConversation.assignee_id == assignee_id
             )
 
-        total = session.execute(
+        total = (await session.execute(
             select(func.count())
             .select_from(PrivateConversation)
             .where(*conditions)
-        ).scalar_one()
+        )).scalar_one()
 
         offset = (page - 1) * limit
 
@@ -112,19 +117,17 @@ class ConversationRepository:
             .limit(limit)
             .offset(offset)
         )
+        
+        result = await session.execute(statement)
 
-        conversations = (
-            session.execute(statement)
-            .scalars()
-            .all()
-        )
+        conversations = result.scalars().all()
 
         return conversations, total
         
     
     @staticmethod
-    def create(
-        session: Session,
+    async def create(
+        session: AsyncSession,
         task_id: UUID,
         assignee_id: UUID,
     ) -> PrivateConversation:
@@ -136,25 +139,25 @@ class ConversationRepository:
         )
         
         session.add(conversation)
-        session.flush()
+        await session.flush()
         return conversation
     
     
     @staticmethod
-    def reactive(
-        session: Session,
+    async def reactive(
+        session: AsyncSession,
         conversation: PrivateConversation
     ) -> PrivateConversation:
         conversation.status = ConversationStatus.ACTIVE
-        session.flush()
+        await session.flush()
         return conversation
     
     
     @staticmethod
-    def close(
-        session: Session,
+    async def close(
+        session: AsyncSession,
         conversation: PrivateConversation
     ) -> PrivateConversation:
         conversation.status = ConversationStatus.CLOSED
-        session.flush()
+        await session.flush()
         return conversation

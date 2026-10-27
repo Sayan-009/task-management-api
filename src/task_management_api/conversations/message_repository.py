@@ -5,9 +5,9 @@ from sqlalchemy import (
    func
 )
 from sqlalchemy.orm import (
-   Session,
    selectinload
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.users.model import User
 from task_management_api.conversations.message_model import PrivateMessage
@@ -21,8 +21,8 @@ from task_management_api.conversations.message_schema import (
 class MessageRepository:
    
    @staticmethod
-   def create(
-      session: Session,
+   async def create(
+      session: AsyncSession,
       conversation_id: UUID,
       sender: User,
       message: CreateMessageRequest,
@@ -32,25 +32,27 @@ class MessageRepository:
          sender=sender,
          content=message.content,
          reply_to_message_id=message.reply_to_message_id,
+          attachments=[],
       )
       
       session.add(new_message)
-      session.flush()
+      await session.flush()
       
       return new_message
    
    @staticmethod
-   def get_by_id(
-      session: Session,
+   async def get_by_id(
+      session: AsyncSession,
       message_id: UUID,
    ) -> PrivateMessage | None:
       statement = select(PrivateMessage).where(PrivateMessage.id == message_id)
-      return session.execute(statement).scalar_one_or_none()
+      result = await session.execute(statement)
+      return result.scalar_one_or_none()
    
    
    @staticmethod
-   def get_by_conversation_and_id(
-      session: Session,
+   async def get_by_conversation_and_id(
+      session: AsyncSession,
       conversation_id: UUID,
       message_id: UUID,
    ) -> PrivateMessage | None:
@@ -59,6 +61,9 @@ class MessageRepository:
          select(PrivateMessage)
          .options(
             selectinload(PrivateMessage.attachments),
+            selectinload(PrivateMessage.sender),
+            selectinload(PrivateMessage.reply_to)
+                .selectinload(PrivateMessage.sender),
          )
          .where(
                PrivateMessage.id == message_id,
@@ -66,23 +71,24 @@ class MessageRepository:
          )
       )
 
-      return session.execute(statement).scalar_one_or_none()
+      result = await session.execute(statement)
+      return result.scalar_one_or_none()
    
    @staticmethod
-   def get_messages(
-      session: Session,
+   async def get_messages(
+      session: AsyncSession,
       conversation_id: UUID,
       page: int = 1,
       limit: int = 10,
    ) -> tuple[list[PrivateMessage], int]:
 
-      total = session.execute(
+      total = (await session.execute(
          select(func.count())
          .select_from(PrivateMessage)
          .where(
                PrivateMessage.conversation_id == conversation_id
          )
-      ).scalar_one()
+      )).scalar_one()
 
       offset = (page - 1) * limit
 
@@ -103,17 +109,17 @@ class MessageRepository:
          .limit(limit)
          .offset(offset)
       )
+      
+      result = await session.execute(statement)
 
-      messages = session.execute(
-         statement
-      ).scalars().all()
+      messages = result.scalars().all()
 
       return messages, total
    
    
    @staticmethod
-   def update(
-      session: Session,
+   async def update(
+      session: AsyncSession,
       message: PrivateMessage,
       updated_message: UpdateMessageRequest,
    ) -> PrivateMessage:
@@ -121,25 +127,25 @@ class MessageRepository:
       message.is_edited = True
       message.edited_at = datetime.now(timezone.utc)
       
-      session.flush()
+      await session.flush()
       return message
    
    
    @staticmethod
-   def soft_delete(
-      session: Session,
+   async def soft_delete(
+      session: AsyncSession,
       message: PrivateMessage
    ) -> None:
       
       message.is_deleted = True
       message.deleted_at = datetime.now(timezone.utc)
       
-      session.flush()
+      await session.flush()
       
       
    @staticmethod
-   def mark_messages_as_read(
-      session: Session,
+   async def mark_messages_as_read(
+      session: AsyncSession,
       conversation_id: UUID,
       current_user_id: UUID,
       message_ids: list[UUID],
@@ -155,12 +161,10 @@ class MessageRepository:
                PrivateMessage.is_deleted.is_(False),
          )
       )
+      
+      result = await session.execute(statement)
 
-      messages = (
-         session.execute(statement)
-         .scalars()
-         .all()
-      )
+      messages = result.scalars().all()
 
       read_at = datetime.now(timezone.utc)
 
@@ -168,6 +172,6 @@ class MessageRepository:
          message.is_read = True
          message.read_at = read_at
 
-      session.flush()
+      await session.flush()
 
       return messages   

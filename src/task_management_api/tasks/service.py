@@ -1,6 +1,6 @@
 import math
 from uuid import UUID
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.users.model import User
 from task_management_api.tasks.model import Task, TaskAssignee
@@ -50,18 +50,18 @@ from task_management_api.core.exceptions import (
 class TaskService:
     
     @staticmethod
-    def create_task(
-        session: Session,
+    async def create_task(
+        session: AsyncSession,
         task: TaskCreate,
         owner_id: UUID,
     ) -> Task:
-        task = TaskRepository.create(
+        task = await TaskRepository.create(
             session,
             owner_id,
             task
         )
         
-        TaskRepository.create_activity(
+        await TaskRepository.create_activity(
             session=session,
             task_id=task.id,
             user_id=owner_id,
@@ -71,8 +71,8 @@ class TaskService:
         return task
         
     @staticmethod
-    def get_user_tasks(
-        session: Session,
+    async def get_user_tasks(
+        session: AsyncSession,
         owner_id: UUID,
         search: str | None = None,
         status: TaskStatus | None = None,
@@ -83,7 +83,7 @@ class TaskService:
         limit: int = 10,
     ) -> TaskListResponse:
         
-        tasks, total = TaskRepository.get_by_owner(
+        tasks, total = await TaskRepository.get_by_owner(
             session,
             owner_id,
             search,
@@ -107,20 +107,20 @@ class TaskService:
         
         
     @staticmethod
-    def get_task_details(
-        session: Session,
+    async def get_task_details(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
     ) -> TaskDetailResponse:
 
-        task = TaskRepository.get_active_by_id(session, task_id)
+        task = await TaskRepository.get_active_by_id(session, task_id)
 
         if task is None:
             raise TaskNotFoundError("Task not found")
 
         is_owner = task.owner_id == current_user.id
 
-        is_assignee = TaskRepository.get_by_task_user(
+        is_assignee = await TaskRepository.get_by_task_user(
             session,
             task_id,
             current_user.id,
@@ -131,7 +131,7 @@ class TaskService:
                 "You don't have permission to access this task"
             )
 
-        task_details = TaskRepository.get_task_with_assignees(
+        task_details = await TaskRepository.get_task_with_assignees(
             session,
             task_id,
         )
@@ -165,13 +165,13 @@ class TaskService:
     
     
     @staticmethod
-    def update_task(
-        session: Session,
+    async def update_task(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
         update_task: TaskUpdate,
     ) -> Task:
-        task = TaskRepository.get_active_by_id(session, task_id)
+        task = await TaskRepository.get_active_by_id(session, task_id)
         
         if task is None:
             raise TaskNotFoundError("Task not found")
@@ -188,7 +188,7 @@ class TaskService:
         old_description = task.description
         old_priority = task.priority
         
-        updated_task = TaskRepository.update(
+        updated_task = await TaskRepository.update(
             session,
             task,
             updates,
@@ -196,7 +196,7 @@ class TaskService:
         
         # Record title change
         if old_title != updated_task.title:
-            TaskRepository.create_activity(
+            await TaskRepository.create_activity(
                 session=session,
                 task_id=updated_task.id,
                 user_id=current_user.id,
@@ -208,7 +208,7 @@ class TaskService:
 
         # Record description change
         if old_description != updated_task.description:
-            TaskRepository.create_activity(
+            await TaskRepository.create_activity(
                 session=session,
                 task_id=updated_task.id,
                 user_id=current_user.id,
@@ -220,7 +220,7 @@ class TaskService:
 
         # Record priority change
         if old_priority != updated_task.priority:
-            TaskRepository.create_activity(
+            await TaskRepository.create_activity(
                 session=session,
                 task_id=updated_task.id,
                 user_id=current_user.id,
@@ -234,13 +234,13 @@ class TaskService:
         
         
     @staticmethod
-    def status_update(
-        session: Session,
+    async def status_update(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
         task_status: TaskStatusUpdate,
     ) -> Task:
-        task = TaskRepository.get_active_by_id(session, task_id)
+        task = await TaskRepository.get_active_by_id(session, task_id)
                 
         if task is None:
             raise TaskNotFoundError("Task not found")
@@ -250,14 +250,14 @@ class TaskService:
         
         old_status = task.status
         
-        updated_task = TaskRepository.status_update(
+        updated_task = await TaskRepository.status_update(
             session,
             task,
             task_status
         )
         
         if old_status != updated_task.status:
-            TaskRepository.create_activity(
+            await TaskRepository.create_activity(
                 session=session,
                 task_id=task_id,
                 user_id=current_user.id,
@@ -271,12 +271,12 @@ class TaskService:
     
     
     @staticmethod
-    def delete_task(
-        session: Session,
+    async def delete_task(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
     ) -> None:
-        task = TaskRepository.get_active_by_id(session, task_id)
+        task = await TaskRepository.get_active_by_id(session, task_id)
         
         if task is None:
             raise TaskNotFoundError("Task not found")
@@ -284,20 +284,20 @@ class TaskService:
         if current_user.id != task.owner_id:
             raise ForbiddenOperationError("You don't have permission to delete this task")
         
-        TaskRepository.delete(
+        await TaskRepository.delete(
             session,
             task,
         )
         
         
     @staticmethod
-    def soft_delete_task(
-        session: Session,
+    async def soft_delete_task(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
     ) -> None:
 
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             task_id,
         )
@@ -317,13 +317,13 @@ class TaskService:
                 "Task is already deleted"
             )
 
-        TaskRepository.soft_delete_task(
+        await TaskRepository.soft_delete_task(
             session,
             task,
         )
     
 
-        TaskRepository.create_activity(
+        await TaskRepository.create_activity(
             session=session,
             task_id=task_id,
             user_id=current_user.id,
@@ -334,8 +334,8 @@ class TaskService:
         )
         
     @staticmethod
-    def hard_delete_task(
-        session: Session,
+    async def hard_delete_task(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
     ) -> None:
@@ -345,7 +345,7 @@ class TaskService:
                 "Only admins can permanently delete tasks"
             )
 
-        task = TaskRepository.get_by_id(
+        task = await TaskRepository.get_by_id(
             session,
             task_id,
         )
@@ -360,20 +360,20 @@ class TaskService:
                 "Only deleted tasks can be permanently deleted"
             )
 
-        TaskRepository.hard_delete_task(
+        await TaskRepository.hard_delete_task(
             session,
             task,
         )
         
         
     @staticmethod
-    def restore_task(
-        session: Session,
+    async def restore_task(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
     ) -> Task:
 
-        task = TaskRepository.get_by_id(
+        task = await TaskRepository.get_by_id(
             session,
             task_id,
         )
@@ -395,12 +395,12 @@ class TaskService:
                 "Task is not deleted"
             )
 
-        TaskRepository.restore_task(
+        await TaskRepository.restore_task(
             session,
             task,
         )
 
-        TaskRepository.create_activity(
+        await TaskRepository.create_activity(
             session=session,
             task_id=task_id,
             user_id=current_user.id,
@@ -414,14 +414,14 @@ class TaskService:
         
         
     @staticmethod
-    def assign_users(
-        session: Session,
+    async def assign_users(
+        session: AsyncSession,
         task_id: UUID,
         owner_id: UUID,
         assignees: TaskAssigneeCreate,
     ) -> list[TaskAssignee]:
 
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             task_id,
         )
@@ -444,7 +444,7 @@ class TaskService:
 
         for user_id in assignee_ids:
 
-            user = UserRepository.get_by_id(
+            user = await UserRepository.get_by_id(
                 session,
                 user_id,
             )
@@ -459,7 +459,7 @@ class TaskService:
                     f"User {user_id} is inactive"
                 )
 
-            existing_assignment = TaskRepository.get_by_task_user(
+            existing_assignment = await TaskRepository.get_by_task_user(
                 session,
                 task_id,
                 user_id,
@@ -470,7 +470,7 @@ class TaskService:
                     f"User {user_id} is already assigned to this task"
                 )
 
-        assignments = TaskRepository.create_many(
+        assignments = await TaskRepository.create_many(
             session,
             task_id,
             assignee_ids,
@@ -480,13 +480,13 @@ class TaskService:
         # Create activity for each newly assigned user
         for assignment in assignments:
             
-            ConversationService.create_or_reactive(
+            await ConversationService.create_or_reactive(
                 session=session,
                 task_id=task_id,
                 assignee_id=assignment.user_id,
             )
             
-            TaskRepository.create_activity(
+            await TaskRepository.create_activity(
                 session=session,
                 task_id=task_id,
                 user_id=owner_id,
@@ -500,13 +500,13 @@ class TaskService:
     
     
     @staticmethod
-    def leave_task(
-        session: Session,
+    async def leave_task(
+        session: AsyncSession,
         current_user: User,
         task_id: UUID,
     ) -> None:
 
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             task_id,
         )
@@ -516,7 +516,7 @@ class TaskService:
                 "Task not found"
             )
 
-        task_assignee = TaskRepository.get_by_task_user(
+        task_assignee = await TaskRepository.get_by_task_user(
             session,
             task_id,
             current_user.id,
@@ -527,7 +527,7 @@ class TaskService:
                 "You are not assigned to this task"
             )
 
-        TaskRepository.create_activity(
+        await TaskRepository.create_activity(
             session=session,
             task_id=task_id,
             user_id=current_user.id,
@@ -537,12 +537,12 @@ class TaskService:
             new_value=None,
         )
 
-        TaskRepository.delete_assignee(
+        await TaskRepository.delete_assignee(
             session,
             task_assignee,
         )
         
-        ConversationService.close_conversation(
+        await ConversationService.close_conversation(
             session=session,
             task_id=task_id,
             assignee_id=current_user.id,
@@ -551,13 +551,13 @@ class TaskService:
     
     
     @staticmethod
-    def delete_assignee(
-        session: Session,
+    async def delete_assignee(
+        session: AsyncSession,
         current_user: User,
         assignee_id: UUID,
         task_id: UUID
     ) -> None:
-        task = TaskRepository.get_active_by_id(session, task_id)
+        task = await TaskRepository.get_active_by_id(session, task_id)
         if task is None:
             raise TaskNotFoundError(
                 "Task not found"
@@ -568,12 +568,12 @@ class TaskService:
                 "you don't have permission to delete the assignees"
             )
             
-        if UserRepository.get_by_id(session, assignee_id) is None:
+        if await UserRepository.get_by_id(session, assignee_id) is None:
             raise UserNotFoundError(
                 f"assignee {assignee_id} not found"
             )
             
-        task_assignee = TaskRepository.get_by_task_user(
+        task_assignee = await TaskRepository.get_by_task_user(
             session,
             task_id,
             assignee_id,
@@ -584,11 +584,11 @@ class TaskService:
                 f"User {assignee_id} is not assigned to task {task_id}"
             )
             
-        TaskRepository.delete_assignee(
+        await TaskRepository.delete_assignee(
             session, task_assignee
         )
         
-        TaskRepository.create_activity(
+        await TaskRepository.create_activity(
             session=session,
             task_id=task_id,
             user_id=current_user.id,
@@ -599,7 +599,7 @@ class TaskService:
         )
         
         
-        ConversationService.close_conversation(
+        await ConversationService.close_conversation(
             session=session,
             task_id=task_id,
             assignee_id=assignee_id,
@@ -608,19 +608,19 @@ class TaskService:
         
         
     @staticmethod
-    def update_my_status(
-        session: Session,
+    async def update_my_status(
+        session: AsyncSession,
         user_id: UUID,
         task_id: UUID,
         update_status: TaskStatusUpdate
     ) -> TaskAssignee:
-        task = TaskRepository.get_active_by_id(session, task_id)
+        task = await TaskRepository.get_active_by_id(session, task_id)
         if task is None:
             raise TaskNotFoundError(
                 "Task not found"
             )
             
-        task_assignee = TaskRepository.get_by_task_user(session, task_id, user_id)
+        task_assignee = await TaskRepository.get_by_task_user(session, task_id, user_id)
         
         if task_assignee is None:
             raise ForbiddenOperationError(
@@ -629,14 +629,14 @@ class TaskService:
             
         old_status = task_assignee.status
             
-        updated_task_assignee = TaskRepository.update_assignee_status(
+        updated_task_assignee = await TaskRepository.update_assignee_status(
             session,
             task_assignee,
             update_status,
         )
         
         if old_status != updated_task_assignee.status:
-            TaskRepository.create_activity(
+            await TaskRepository.create_activity(
                 session=session,
                 task_id=task_id,
                 user_id=user_id,
@@ -651,8 +651,8 @@ class TaskService:
         
         
     @staticmethod
-    def get_assigned_tasks(
-        session: Session,
+    async def get_assigned_tasks(
+        session: AsyncSession,
         user_id: UUID,
         search: str | None = None,
         status: TaskStatus | None = None,
@@ -664,7 +664,7 @@ class TaskService:
     ) -> AssignedTaskListResponse:
     
         
-        assignments, total = TaskRepository.get_tasks_by_assignee(
+        assignments, total = await TaskRepository.get_tasks_by_assignee(
             session,
             user_id,
             search,
@@ -707,8 +707,8 @@ class TaskService:
         
         
     @staticmethod
-    def get_deleted_tasks(
-        session: Session,
+    async def get_deleted_tasks(
+        session: AsyncSession,
         current_user: User,
         page: int = 1,
         limit: int = 10,
@@ -716,7 +716,7 @@ class TaskService:
 
         owner_id = current_user.id
 
-        tasks, total = TaskRepository.get_deleted_tasks(
+        tasks, total = await TaskRepository.get_deleted_tasks(
             session,
             owner_id,
             page,
@@ -737,15 +737,15 @@ class TaskService:
         
         
     @staticmethod
-    def get_task_activities(
-        session: Session,
+    async def get_task_activities(
+        session: AsyncSession,
         task_id: UUID,
         current_user: User,
         page: int = 1,
         limit: int = 10,
     ) -> TaskActivityListResponse:
         
-        task = TaskRepository.get_by_id(session, task_id)
+        task = await TaskRepository.get_by_id(session, task_id)
         
         if task is None:
             raise TaskNotFoundError(
@@ -761,7 +761,7 @@ class TaskService:
                     "You don't have permission to see this task activities"
                 )
         else:
-            is_assignee = TaskRepository.get_by_task_user(
+            is_assignee = await TaskRepository.get_by_task_user(
                 session,
                 task_id,
                 current_user.id,
@@ -772,7 +772,7 @@ class TaskService:
                     "You don't have permission to see this task activities"
                 )
             
-        activities, total = TaskRepository.get_task_activities(
+        activities, total = await TaskRepository.get_task_activities(
             session,
             task_id,
             page,

@@ -6,7 +6,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.realtime.websocket.dispatcher import EventDispatcher
 
@@ -30,7 +30,7 @@ websocket_router = APIRouter(
 async def websocket_endpoint(
     websocket: WebSocket,
     current_user: User = Depends(get_websocket_user),
-    session: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> None:
     
     is_first_connection = await connection_manager.connect(

@@ -1,7 +1,7 @@
 import math
 from uuid import UUID
 from datetime import (datetime, timezone, timedelta)
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.users.model import User
 from task_management_api.tasks.repository import TaskRepository
@@ -107,14 +107,14 @@ class MessageService:
         )
     
     @staticmethod
-    def create_message(
-        session: Session,
+    async def create_message(
+        session: AsyncSession,
         current_user: User,
         conversation_id: UUID,
         message: CreateMessageRequest,
     ) -> MessageResponse:
             
-        conversation = ConversationRepository.get_active_by_id(
+        conversation = await ConversationRepository.get_active_by_id(
             session,
             conversation_id
         )
@@ -124,7 +124,7 @@ class MessageService:
                 "Conversation not found"
             )
             
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             conversation.task_id
         )
@@ -145,7 +145,7 @@ class MessageService:
             
         if message.reply_to_message_id is not None:
             replied_message = (
-                MessageRepository.get_by_conversation_and_id(
+                await MessageRepository.get_by_conversation_and_id(
                     session=session,
                     conversation_id=conversation_id,
                     message_id=message.reply_to_message_id,
@@ -160,7 +160,7 @@ class MessageService:
         attachments = []
                 
         if message.attachment_ids:
-            attachments = AttachmentRepository.get_by_ids(
+            attachments = await AttachmentRepository.get_by_ids(
                 session,
                 message.attachment_ids,
             )
@@ -182,12 +182,13 @@ class MessageService:
                         "One or more attachments are already attached to a message"
                     )
             
-        created_message = MessageRepository.create(
+        created_message = await MessageRepository.create(
             session,
             conversation_id,
             current_user,
             message,
         )
+        
         
         created_message.attachments.extend(attachments)
         
@@ -200,15 +201,15 @@ class MessageService:
         
         
     @staticmethod
-    def update_message(
-        session: Session,
+    async def update_message(
+        session: AsyncSession,
         current_user: User,
         updated_message: UpdateMessageRequest,
         conversation_id: UUID,
         message_id: UUID
     ) -> MessageResponse:
 
-        conversation = ConversationRepository.get_active_by_id(
+        conversation = await ConversationRepository.get_active_by_id(
             session,
             conversation_id,
         )
@@ -218,7 +219,7 @@ class MessageService:
                 "Conversation not found"
             )
 
-        message = MessageRepository.get_by_conversation_and_id(
+        message = await MessageRepository.get_by_conversation_and_id(
             session,
             conversation_id,
             message_id,
@@ -249,21 +250,21 @@ class MessageService:
                 "You can't update a message with the same content"
             )
 
-        return MessageRepository.update(
+        return await MessageRepository.update(
             session,
             message,
             updated_message,
         )
         
     @staticmethod
-    def delete_message(
-        session: Session,
+    async def delete_message(
+        session: AsyncSession,
         current_user: User,
         conversation_id: UUID,
         message_id: UUID,
     ) -> MessageResponse:
 
-        conversation = ConversationRepository.get_active_by_id(
+        conversation = await ConversationRepository.get_active_by_id(
             session,
             conversation_id,
         )
@@ -273,7 +274,7 @@ class MessageService:
                 "Conversation not found"
             )
 
-        message = MessageRepository.get_by_conversation_and_id(
+        message = await MessageRepository.get_by_conversation_and_id(
             session,
             conversation_id,
             message_id,
@@ -294,7 +295,7 @@ class MessageService:
                 "You don't have permission to delete this message"
             )
 
-        MessageRepository.soft_delete(
+        await MessageRepository.soft_delete(
             session,
             message,
         )
@@ -302,15 +303,15 @@ class MessageService:
         return message
         
     @staticmethod
-    def get_messages(
-        session: Session,
+    async def get_messages(
+        session: AsyncSession,
         current_user: User,
         conversation_id: UUID,
         page: int = 1,
         limit: int = 10,
     ) -> MessageListResponse:
 
-        conversation = ConversationRepository.get_by_id(
+        conversation = await ConversationRepository.get_by_id(
             session,
             conversation_id
         )
@@ -320,7 +321,7 @@ class MessageService:
                 "Conversation not found"
             )
 
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             conversation.task_id
         )
@@ -347,7 +348,7 @@ class MessageService:
                 "Conversation not found"
             )
 
-        messages, total = MessageRepository.get_messages(
+        messages, total = await MessageRepository.get_messages(
             session,
             conversation_id,
             page,
@@ -375,8 +376,8 @@ class MessageService:
         
         
     @staticmethod
-    def get_deleted_task_messages(
-        session: Session,
+    async def get_deleted_task_messages(
+        session: AsyncSession,
         current_user: User,
         conversation_id: UUID,
         page: int = 1,
@@ -384,7 +385,7 @@ class MessageService:
     ) -> MessageListResponse:
 
         # Get conversation
-        conversation = ConversationRepository.get_by_id(
+        conversation = await ConversationRepository.get_by_id(
             session,
             conversation_id
         )
@@ -395,7 +396,7 @@ class MessageService:
             )
 
         # Get task, including soft-deleted tasks
-        task = TaskRepository.get_by_id(
+        task = await TaskRepository.get_by_id(
             session,
             conversation.task_id
         )
@@ -418,7 +419,7 @@ class MessageService:
             )
 
         # Fetch messages using existing repository
-        messages, total = MessageRepository.get_messages(
+        messages, total = await MessageRepository.get_messages(
             session=session,
             conversation_id=conversation_id,
             page=page,
@@ -445,14 +446,14 @@ class MessageService:
         )
         
     @staticmethod
-    def mark_messages_as_read(
-        session: Session,
+    async def mark_messages_as_read(
+        session: AsyncSession,
         current_user: User,
         conversation_id: UUID,
         message_ids: list[UUID],
     ):
         
-        conversation = ConversationRepository.get_active_by_id(
+        conversation = await ConversationRepository.get_active_by_id(
             session,
             conversation_id,
         )
@@ -462,7 +463,7 @@ class MessageService:
                 "Conversation not found"
             )
 
-        task = TaskRepository.get_active_by_id(
+        task = await TaskRepository.get_active_by_id(
             session,
             conversation.task_id,
         )
@@ -480,7 +481,7 @@ class MessageService:
                 "You don't have permission to access this conversation"
             )
 
-        messages = MessageRepository.mark_messages_as_read(
+        messages = await MessageRepository.mark_messages_as_read(
             session=session,
             conversation_id=conversation_id,
             current_user_id=current_user.id,

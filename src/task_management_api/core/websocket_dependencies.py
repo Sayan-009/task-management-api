@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import WebSocket, Depends, WebSocketException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.db.session import get_db
 from task_management_api.users.model import User
@@ -9,9 +9,9 @@ from task_management_api.users.repository import UserRepository
 from task_management_api.core.token import TokenService
 
 
-def get_websocket_user(
+async def get_websocket_user(
     websocket: WebSocket,
-    session: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_db),
 ) -> User | None:
 
     token = websocket.query_params.get("token")
@@ -41,7 +41,7 @@ def get_websocket_user(
             reason="Could not validate credentials",
         ) from None
 
-    user = UserRepository.get_by_id(
+    user = await UserRepository.get_by_id(
         session,
         user_id
     )

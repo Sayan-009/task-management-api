@@ -2,10 +2,9 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, status, Depends, UploadFile, File
-from fastapi.responses import FileResponse
 from fastapi.responses import RedirectResponse
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.db.session import get_db
 from task_management_api.core.dependencies import get_current_user
@@ -32,7 +31,7 @@ async def file_upload(
     files: list[UploadFile] = File(...),
     current_user: User = Depends(get_current_user),
     attachment_service: AttachmentService = Depends(get_attachment_service),
-    session: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_db)
 ) -> list[AttachmentResponse]:
     try:
         uploaded_attachments = await attachment_service.upload_attachments(
@@ -41,12 +40,12 @@ async def file_upload(
             current_user,
         )
 
-        session.commit()
+        await session.commit()
 
         return uploaded_attachments
     
     except Exception:
-        session.rollback()
+        await session.rollback()
         raise
         
     
@@ -55,9 +54,9 @@ async def get_attachment(
     attachment_id: UUID,
     current_user: User = Depends(get_current_user),
     attachment_service: AttachmentService = Depends(get_attachment_service),
-    session: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_db),
 ):
-    attachment = attachment_service.get_attachment_for_user(
+    attachment = await attachment_service.get_attachment_for_user(
         session,
         current_user,
         attachment_id,

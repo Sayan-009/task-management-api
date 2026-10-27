@@ -1,7 +1,8 @@
 from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy import select, func, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import joinedload
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any
 
 
@@ -24,8 +25,8 @@ from task_management_api.tasks.schema import (
 class TaskRepository:
     
     @staticmethod
-    def create(
-        session: Session,
+    async def create(
+        session: AsyncSession,
         owner_id: UUID,
         task: TaskCreate
     ) -> Task:
@@ -38,13 +39,13 @@ class TaskRepository:
         
         session.add(new_task)
         
-        session.flush()
+        await session.flush()
         
         return new_task
     
     @staticmethod
-    def update(
-        session: Session,
+    async def update(
+        session: AsyncSession,
         task: Task,
         updates: dict[str, Any],
     ) -> Task:
@@ -52,13 +53,13 @@ class TaskRepository:
             setattr(task, field, value)
             
         session.add(task)
-        session.flush()
+        await session.flush()
         return task
     
     
     @staticmethod
-    def get_by_owner(
-        session: Session,
+    async def get_by_owner(
+        session: AsyncSession,
         owner_id: UUID,
         search: str | None = None,
         status: TaskStatus | None = None,
@@ -109,37 +110,41 @@ class TaskRepository:
                 statement = statement.order_by(sort_column.asc())
         
         # Count before pagination
-        total = session.execute(
+        total = await session.execute(
             select(func.count()).select_from(
                 statement.subquery()
             )
-        ).scalar_one()
+        )
+        total = total.scalar_one()
         
         # Pagination
         offset = (page - 1) * limit
         
         statement = statement.offset(offset).limit(limit)
         
-        tasks = session.execute(statement).scalars().all()
+        result = await session.execute(statement)
+        
+        tasks = result.scalars().all()
         
         return tasks, total
     
     
     @staticmethod
-    def get_by_id(
-        session: Session,
+    async def get_by_id(
+        session: AsyncSession,
         task_id: UUID,
     ) -> Task | None:
         statement = select(Task).where(
             Task.id == task_id
         )
 
-        return session.execute(statement).scalar_one_or_none()
-    
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
+
     
     @staticmethod
-    def get_active_by_id(
-        session: Session,
+    async def get_active_by_id(
+        session: AsyncSession,
         task_id: UUID,
     ) -> Task | None:
         statement = select(Task).where(
@@ -147,58 +152,58 @@ class TaskRepository:
             Task.is_deleted.is_(False),
         )
 
-        return session.execute(statement).scalar_one_or_none()
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
     
-      
     @staticmethod
-    def status_update(
-        session: Session,
+    async def status_update(
+        session: AsyncSession,
         task: Task,
         task_status: TaskStatusUpdate,
     ) -> Task:
         task.status = task_status.status
-        session.flush()
+        await session.flush()
         return task
     
     
     @staticmethod
-    def soft_delete_task(
-        session: Session,
+    async def soft_delete_task(
+        session: AsyncSession,
         task: Task,
     ) -> Task:
         task.is_deleted = True
         task.deleted_at = datetime.now(timezone.utc)
 
-        session.flush()
+        await session.flush()
 
         return task
     
     
     @staticmethod
-    def hard_delete_task(
-        session: Session,
+    async def hard_delete_task(
+        session: AsyncSession,
         task: Task,
     ) -> None:
-        session.delete(task)
-        session.flush()
+        await session.delete(task)
+        await session.flush()
         
     
     @staticmethod
-    def restore_task(
-        session: Session,
+    async def restore_task(
+        session: AsyncSession,
         task: Task,
     ) -> Task:
         task.is_deleted = False
         task.deleted_at = None
 
-        session.flush()
+        await session.flush()
 
         return task
         
         
     @staticmethod
-    def create_many(
-        session: Session,
+    async def create_many(
+        session: AsyncSession,
         task_id: UUID,
         assignee_ids: list[UUID]
     ) -> list[TaskAssignee]:
@@ -211,14 +216,13 @@ class TaskRepository:
         ]
         
         session.add_all(assignments)
-        
-        session.flush()
+        await session.flush()
         
         return assignments
     
     @staticmethod
-    def get_by_task_user(
-        session: Session,
+    async def get_by_task_user(
+        session: AsyncSession,
         task_id: UUID,
         user_id: UUID,
     ) -> TaskAssignee | None:
@@ -227,22 +231,22 @@ class TaskRepository:
             TaskAssignee.user_id == user_id,
             TaskAssignee.task_id == task_id,
         )
-        
-        return session.execute(statement).scalar_one_or_none()
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
     
     
     @staticmethod
-    def delete_assignee(
-        session: Session,
+    async def delete_assignee(
+        session: AsyncSession,
         task_assignee: TaskAssignee
     ) -> None:
-        session.delete(task_assignee)
-        session.flush()
+        await session.delete(task_assignee)
+        await session.flush()
         
         
     @staticmethod
-    def get_task_with_assignees(
-        session: Session,
+    async def get_task_with_assignees(
+        session: AsyncSession,
         task_id: UUID
     ) -> Task | None:
         statement = select(Task).where(
@@ -252,25 +256,26 @@ class TaskRepository:
             joinedload(Task.assignees).joinedload(TaskAssignee.user),
         )
         
-        return session.execute(statement).unique().scalar_one_or_none()
+        result = await session.execute(statement)
+        return result.unique().scalar_one_or_none()
     
     
     
     @staticmethod
-    def update_assignee_status(
-        session: Session,
+    async def update_assignee_status(
+        session: AsyncSession,
         task_assignee: TaskAssignee,
         update_status: TaskStatusUpdate,
     ) -> TaskAssignee:
         
         task_assignee.status = update_status.status
-        session.flush()
+        await session.flush()
         return task_assignee
     
     
     @staticmethod
-    def get_tasks_by_assignee(
-        session: Session,
+    async def get_tasks_by_assignee(
+        session: AsyncSession,
         user_id: UUID,
         search: str | None = None,
         status: TaskStatus | None = None,
@@ -337,29 +342,27 @@ class TaskRepository:
                 )
 
         # Count before pagination
-        total = session.execute(
+        total = (await session.execute(
             select(func.count()).select_from(
                 statement.subquery()
             )
-        ).scalar_one()
+        )).scalar_one()
 
         # Pagination
         offset = (page - 1) * limit
 
         statement = statement.offset(offset).limit(limit)
+        
+        result = await session.execute(statement)
 
-        task_assignees = (
-            session.execute(statement)
-            .scalars()
-            .all()
-        )
+        task_assignees = result.scalars().all()
 
         return task_assignees, total
     
     
     @staticmethod
-    def get_deleted_tasks(
-        session: Session,
+    async def get_deleted_tasks(
+        session: AsyncSession,
         owner_id: UUID,
         page: int = 1,
         limit: int = 10,
@@ -382,26 +385,27 @@ class TaskRepository:
                 Task.owner_id == owner_id
             )
 
-        total = session.execute(
+        total = (await session.execute(
             select(func.count()).select_from(
                 statement.subquery()
             )
-        ).scalar_one()
+        )).scalar_one()
 
         offset = (page - 1) * limit
 
         statement = statement.offset(offset).limit(limit)
+        
+        
+        result = await session.execute(statement)
 
-        tasks = session.execute(
-            statement
-        ).scalars().all()
+        tasks = result.scalars().all()
 
         return tasks, total
     
     
     @staticmethod
-    def create_activity(
-        session: Session,
+    async def create_activity(
+        session: AsyncSession,
         task_id: UUID,
         user_id: UUID,
         action: TaskActivityType,
@@ -419,13 +423,13 @@ class TaskRepository:
         )
         
         session.add(activity)
-        session.flush()
+        await session.flush()
         return activity
     
     
     @staticmethod
-    def get_task_activities(
-        session: Session,
+    async def get_task_activities(
+        session: AsyncSession,
         task_id: UUID,
         page: int = 1,
         limit: int = 10
@@ -442,17 +446,19 @@ class TaskRepository:
             ) 
         )
         
-        total = session.execute(
+        total = (await session.execute(
             select(func.count()).select_from(
                 statement.subquery()
             )
-        ).scalar_one()
+        )).scalar_one()
 
         offset = (page - 1) * limit
 
-        statement = statement.offset(offset).limit(limit)     
+        statement = statement.offset(offset).limit(limit) 
         
-        task_activities = session.execute(statement).scalars().all()
+        result = await session.execute(statement)    
+        
+        task_activities = result.scalars().all()
         
         return task_activities, total
         

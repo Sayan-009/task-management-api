@@ -17,7 +17,7 @@ class TypingStartHandler:
         context: WebSocketEventContext,
     ) -> None:
         
-        other_participant_id = ConversationService.get_other_participant_id(
+        other_participant_id = await ConversationService.get_other_participant_id(
             session=context.session,
             current_user=context.current_user,
             conversation_id=context.conversation_id,

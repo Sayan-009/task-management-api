@@ -2,7 +2,7 @@ from uuid import UUID
 from fastapi import UploadFile
 from uuid import uuid4
 from pathlib import Path
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.conversations.storage.file_storage import FileStorage
 from task_management_api.conversations.attachment_repository import AttachmentRepository
@@ -49,7 +49,7 @@ class AttachmentService:
     
     async def upload_attachment(
         self,
-        session: Session,
+        session: AsyncSession,
         file: UploadFile,
         user: User,
     ) -> MessageAttachment:
@@ -91,7 +91,7 @@ class AttachmentService:
         )
         
         try:
-            created_attachment = AttachmentRepository.create(
+            created_attachment = await AttachmentRepository.create(
                 session,
                 attachment
             )
@@ -105,7 +105,7 @@ class AttachmentService:
     
     async def upload_attachments(
         self,
-        session: Session,
+        session: AsyncSession,
         files: list[UploadFile],
         user: User,
     ) -> list[MessageAttachment]:
@@ -131,13 +131,13 @@ class AttachmentService:
             raise
         
         
-    def get_attachment_for_user(
+    async def get_attachment_for_user(
         self,
-        session: Session,
+        session: AsyncSession,
         current_user: User,
         attachment_id: UUID
     ) -> MessageAttachment :
-        attachment = AttachmentRepository.get_with_message(
+        attachment = await AttachmentRepository.get_with_message(
             session,
             attachment_id,
         )

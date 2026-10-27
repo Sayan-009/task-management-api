@@ -2,7 +2,8 @@ from uuid import UUID
 from fastapi import Query
 from datetime import datetime, timezone
 from sqlalchemy import select, func
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_management_api.users.model import User
 from task_management_api.comments.model import TaskComment
@@ -16,8 +17,8 @@ from task_management_api.comments.schema import (
 class CommentRepository:
     
     @staticmethod
-    def create(
-        session: Session,
+    async def create(
+        session: AsyncSession,
         task_id: UUID,
         author: User,
         comment_data: CreateComment,
@@ -30,14 +31,14 @@ class CommentRepository:
         )
 
         session.add(comment)
-        session.flush()
+        await session.flush()
 
         return comment
     
     
     @staticmethod
-    def get_active_comment(
-        session: Session,
+    async def get_active_comment(
+        session: AsyncSession,
         comment_id: UUID
     ) -> TaskComment | None:
         statement = select(TaskComment).where(
@@ -45,12 +46,14 @@ class CommentRepository:
             TaskComment.is_deleted.is_(False)
         )
         
-        return session.execute(statement).scalar_one_or_none()
+        result = await session.execute(statement)
+        
+        return result.scalar_one_or_none()
     
     
     @staticmethod
-    def update(
-        session: Session,
+    async def update(
+        session: AsyncSession,
         comment: TaskComment,
         update_data: UpdateComment,
     ) -> TaskComment:
@@ -58,38 +61,39 @@ class CommentRepository:
         comment.is_edited = True
         comment.edited_at = datetime.now(timezone.utc)
         
-        session.flush()
+        await session.flush()
         
         return comment
     
     
     @staticmethod
-    def soft_delete(
-        session: Session,
+    async def soft_delete(
+        session: AsyncSession,
         comment: TaskComment,
     ) -> TaskComment:
         comment.is_deleted = True
         comment.deleted_at = datetime.now(timezone.utc)
         
-        session.flush()
-    
-    
+        await session.flush()
+        return comment
+
+
     @staticmethod
-    def comments_by_task_id(
-        session: Session,
+    async def comments_by_task_id(
+        session: AsyncSession,
         task_id: UUID,
         page: int,
         limit: int,
     ) -> tuple[list[TaskComment], int]:
+        
 
-
-        total = session.execute(
+        total = (await session.execute(
             select(func.count())
             .select_from(TaskComment)
             .where(
                 TaskComment.task_id == task_id
             )
-        ).scalar_one()
+        )).scalar_one()
 
    
         offset = (page - 1) * limit
@@ -109,11 +113,9 @@ class CommentRepository:
             .limit(limit)
             .offset(offset)
         )
+        
+        result = await session.execute(statement)
 
-        comments = (
-            session.execute(statement)
-            .scalars()
-            .all()
-        )
+        comments = result.scalars().all()
 
         return comments, total

@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from task_management_api.db.session import get_db
@@ -18,9 +18,9 @@ oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/users/token",
 )
 
-def get_current_user(
+async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    session: Session = Depends(get_db),     
+    session: AsyncSession = Depends(get_db),     
 ) -> User:
     
     try:
@@ -41,7 +41,7 @@ def get_current_user(
             "Could not validate credentials."
         ) from None
     
-    user = UserRepository.get_by_id(
+    user = await UserRepository.get_by_id(
         session,
         user_id
     )

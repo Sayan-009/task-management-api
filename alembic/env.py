@@ -52,15 +52,31 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    with engine.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-        )
+import asyncio
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-        with context.begin_transaction():
-            context.run_migrations()
+
+def do_run_migrations(connection) -> None:
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def run_async_migrations() -> None:
+    async with engine.connect() as connection:
+        await connection.run_sync(do_run_migrations)
+
+
+def run_migrations_online() -> None:
+    if isinstance(engine, AsyncEngine):
+        asyncio.run(run_async_migrations())
+    else:
+        with engine.connect() as connection:
+            do_run_migrations(connection)
 
 
 if context.is_offline_mode():

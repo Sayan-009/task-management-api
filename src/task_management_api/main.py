@@ -2,11 +2,14 @@ from task_management_api.db import models
 
 import logging
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
+from task_management_api.db.session import engine
 
 from task_management_api.core.exceptions import AppException
 from task_management_api.users.router import router as users_router
@@ -19,7 +22,19 @@ from task_management_api.realtime.websocket.router import websocket_router
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+     # Application startup
+    print("Application starting...")
+
+    yield
+
+    # Application shutdown
+    print("Application shutting down...")
+    await engine.dispose()
+    print("Database engine disposed.")
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
